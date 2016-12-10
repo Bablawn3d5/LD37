@@ -1,4 +1,60 @@
-TODO:
+The Adventures of Nick Cage: Quest to Find the Room
+------------------------------------------------------
+------------
+| Gameplay |
+------------
+- Similar to Hack Slash Loot
+    - Top-down turn based adventure
+- Goal is to find clues that lead to 'The Room'
+
+- Upgrades
+- Tile map
+    + Doors
+    + Chests (Upgrade)
+    + Lava (Stats)
+    + Floor
+    + NC (Stats)
+    + FBI Agents (Stats)
+    + Clue
+- Sprites for
+    + All tiles
+    + 
+- AI pathing
+- Fog of War
+
+Nice to haves:
+- Maze Generation
+
+
+------------
+| Planning |
+------------
+- Systems
+    + Destroyer
+    + Input
+    + Sound
+    + SpriteRender
+    + Game
+        - Tile Map for things w/o stats (so that you don't need to rebuild it every frame)
+        - Game Loop
+            + Goes over entities with components: Body, Stats, TileType, GameBody
+            + Simulate movement (Stats, Upgrades) (if there is overlap, reset positions)
+            + If an entity is determined to be in FoW (based on tile map) remove the renderable component (or vice-versa) by looking at the TileType component
+- Components
+    + Body (for rendering)
+    + GameBody (position in game grid)
+    + Destroyed
+    + Input Responder
+    + Renderable
+    + Sounds
+    + Stats
+    + TileType (See above for types)
+    
+
+
+------------
+| TODO     |
+------------
 
 - Move CopyScript to Top Level
 - Script pre/post build copy over isn't working again.
