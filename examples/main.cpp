@@ -149,9 +149,10 @@ public:
         level.joins();
 
         // Signal main thread we can have a loadscreen
-        level.queue([this] {
+        // HACK(SMA): Disable loadscreen because its very broken :(((
+        /*level.queue([this] {
           this->start_loadscreen();
-        });
+        });*/
 
         // Load all entites in and preloader data
         for ( auto& item : v["entities"] ) {
