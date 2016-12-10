@@ -10,17 +10,20 @@ TILESIZE_Y = 32
 
 class Game(entityx.Entity):
     def __init__(self):
-        self.staticMap = [[None]*9 for i in range(5)]
+        self.staticMap   = [[None]*9 for i in range(5)]
         self.moveableMap = [[None]*9 for i in range(5)]
+        self.fogofwar    = [[None]*9 for i in range(5)]
         self.inputResponder = self.Component(InputResponder)
         self.level = 1
         
-        self.GenerateLevelLayout([[TileType.wall, TileType.wall, TileType.wall, TileType.wall, TileType.wall, TileType.wall, TileType.wall, TileType.wall, TileType.wall], 
+        self.GenerateLevelLayout(self.staticMap, [[TileType.wall, TileType.wall, TileType.wall, TileType.wall, TileType.wall, TileType.wall, TileType.wall, TileType.wall, TileType.wall], 
                             [TileType.wall, TileType.floor, TileType.floor, TileType.floor, TileType.wall, TileType.floor, TileType.floor, TileType.floor, TileType.wall],
                             [TileType.wall, TileType.floor, TileType.floor, TileType.floor, TileType.floor, TileType.floor, TileType.floor, TileType.floor, TileType.wall],
                             [TileType.wall, TileType.floor, TileType.floor, TileType.floor, TileType.wall, TileType.floor, TileType.floor, TileType.floor, TileType.wall],
                             [TileType.wall, TileType.wall, TileType.wall, TileType.wall, TileType.wall, TileType.wall, TileType.wall, TileType.wall, TileType.wall]]);
-                
+        # Cover everything in fog tiles
+        self.GenerateLevelLayout(self.fogofwar, [[TileType.fow3]*9 for i in range(5)])
+
         self.nickCage = Tile(TileType.nickCage, 1, 1, Stats(5, 1))
         self.moveableMap[1][1] = self.nickCage
         self.moveableMap[2][1] = Tile(TileType.chest, 2, 1, upgrade = Upgrade(1, 1))
@@ -49,6 +52,22 @@ class Game(entityx.Entity):
             print "Move Left"
             self.nickCage.body.direction.x = -1
             self.nickCage.body.direction.y = 0
+
+        # Update fog of war based on NC's position
+        for x in range(0, len(self.fogofwar)):
+            for y in range(0, len(self.fogofwar[x])):
+                dist2 = (x - self.nickCage.gameBody.x)**2 + (y -self.nickCage.gameBody.y) ** 2 
+                if( dist2 < 3 ):
+                    self.fogofwar[x][y].setTile(TileType.fow0)
+                elif( dist2 < 5 ):
+                    self.fogofwar[x][y].setTile(TileType.fow1)
+                elif( dist2 < 8 ):
+                    self.fogofwar[x][y].setTile(TileType.fow2)
+                else:
+                    self.fogofwar[x][y].setTile(TileType.fow3)
+
+        # TODO(SMA) : Light up areas based on Line of Sight
+
         
         # Damage loop. If damage is dealt, indicate that the tile cannot move
         for x in range(0, len(self.moveableMap)):
@@ -122,7 +141,7 @@ class Game(entityx.Entity):
                     tile.body.position.y = tile.gameBody.y * TILESIZE_Y
                     tile.gameBody.updated = True
     
-    def GenerateLevelLayout(self, tileMap):
+    def GenerateLevelLayout(self, targetMap, tileMap):
         for x in range(0, len(tileMap)):
             for y in range(0, len(tileMap[x])):
-                self.staticMap[x][y] = Tile(tileMap[x][y], x, y)
+                targetMap[x][y] = Tile(tileMap[x][y], x, y)
