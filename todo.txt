@@ -38,7 +38,7 @@ Nice to haves:
         - Tile Map for things w/o stats (so that you don't need to rebuild it every frame)
         - Game Loop
             + Goes over entities with components: Body, Stats, TileType, GameBody
-            + Simulate movement (Stats, Upgrades) (if there is overlap, reset positions)
+            + Simulate movement (Body, Stats, Upgrades) (if there is overlap, reset positions)
             + If an entity is determined to be in FoW (based on tile map) remove the renderable component (or vice-versa) by looking at the TileType component
 - Components
     + Body (for rendering)

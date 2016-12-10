@@ -1,0 +1,6 @@
+{
+    "pythons" : {
+        "modulename" : "system.game",
+        "class" : "Game"
+    }
+}

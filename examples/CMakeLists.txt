@@ -30,26 +30,18 @@ set(SCRIPTDIR ${PROJECT_SOURCE_DIR}/scripts)
 
 # Add target to copy files
 file(GLOB ExampleResources
-    ${SCRIPTDIR}/action/__init__.py
-    ${SCRIPTDIR}/action/mouse.py
-    ${SCRIPTDIR}/action/shooter.py
-    ${SCRIPTDIR}/action/explosion.py
-    ${SCRIPTDIR}/action/follower.py
     ${SCRIPTDIR}/entityx/__init__.py
     ${SCRIPTDIR}/system/__init__.py
     ${SCRIPTDIR}/system/loader.py
+    ${SCRIPTDIR}/system/game.py
+    ${SCRIPTDIR}/system/tile.py
     ${SCRIPTDIR}/gamemath/__init__.py
     ${SCRIPTDIR}/gamemath/vector2.py
     ${SCRIPTDIR}/gamemath/util.py
     ${FarquaadExamples_SOURCE_DIR}/Config.json
     ${FarquaadExamples_SOURCE_DIR}/Resources/Loader.json
-    ${FarquaadExamples_SOURCE_DIR}/Resources/Box.json
-    ${FarquaadExamples_SOURCE_DIR}/Resources/Hero.json
-    ${FarquaadExamples_SOURCE_DIR}/Resources/Mouse.json
-    ${FarquaadExamples_SOURCE_DIR}/images/Chest_1.ase
+    ${FarquaadExamples_SOURCE_DIR}/Resources/Game.json
     ${FarquaadExamples_SOURCE_DIR}/images/Bar.ase
-    ${FarquaadExamples_SOURCE_DIR}/images/perfectface.png
-    ${FarquaadExamples_SOURCE_DIR}/sounds/Explode.wav
     ${PYTHON27_STD_ZIP})
 
 add_custom_target(CopyExampleResources DEPENDS ${ExampleResources})

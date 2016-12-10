@@ -1,5 +1,5 @@
 {
-  "app_title" : "This is example. Yay.",
+  "app_title" : "LD 37: Adentures of Nick Cage",
   "clear_color" : [95,195,215],
   "keys" : {
     "MoveUp" : "KEY_W",
@@ -17,8 +17,6 @@
     "./Resources/Loader.json"
   ],
   "entities" : [
-    "./Resources/Hero.json",
-    "./Resources/Mouse.json",
-    "./Resources/Box.json"
+    "./Resources/Game.json"
   ]
 }
