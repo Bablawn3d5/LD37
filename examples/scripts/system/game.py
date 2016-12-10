@@ -10,21 +10,22 @@ TILESIZE_Y = 32
 
 class Game(entityx.Entity):
     def __init__(self):
-        self.staticMap = [[None]*5 for i in range(5)]
-        self.moveableMap = [[None]*5 for i in range(5)]
+        self.staticMap = [[None]*9 for i in range(5)]
+        self.moveableMap = [[None]*9 for i in range(5)]
         self.inputResponder = self.Component(InputResponder)
         self.level = 1
         
-        self.GenerateLevelLayout([[TileType.wall, TileType.wall, TileType.wall, TileType.wall, TileType.wall], 
-                            [TileType.wall, TileType.floor, TileType.floor, TileType.floor, TileType.wall],
-                            [TileType.wall, TileType.floor, TileType.floor, TileType.floor, TileType.wall],
-                            [TileType.wall, TileType.floor, TileType.floor, TileType.floor, TileType.wall],
-                            [TileType.wall, TileType.wall, TileType.wall, TileType.wall, TileType.wall]]);
+        self.GenerateLevelLayout([[TileType.wall, TileType.wall, TileType.wall, TileType.wall, TileType.wall, TileType.wall, TileType.wall, TileType.wall, TileType.wall], 
+                            [TileType.wall, TileType.floor, TileType.floor, TileType.floor, TileType.wall, TileType.floor, TileType.floor, TileType.floor, TileType.wall],
+                            [TileType.wall, TileType.floor, TileType.floor, TileType.floor, TileType.floor, TileType.floor, TileType.floor, TileType.floor, TileType.wall],
+                            [TileType.wall, TileType.floor, TileType.floor, TileType.floor, TileType.wall, TileType.floor, TileType.floor, TileType.floor, TileType.wall],
+                            [TileType.wall, TileType.wall, TileType.wall, TileType.wall, TileType.wall, TileType.wall, TileType.wall, TileType.wall, TileType.wall]]);
                 
         self.nickCage = Tile(TileType.nickCage, 1, 1, Stats(5, 1))
         self.moveableMap[1][1] = self.nickCage
         self.moveableMap[2][1] = Tile(TileType.chest, 2, 1, upgrade = Upgrade(1, 1))
         self.moveableMap[1][2] = Tile(TileType.clue, 1, 2, upgrade = Upgrade(level = 1))
+        self.moveableMap[2][4] = Tile(TileType.door, 2, 4, stats = Stats(0,0))
 
     def update(self, dt):
         # Move Nick Cage based on InputResponder
