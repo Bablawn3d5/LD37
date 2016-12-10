@@ -13,6 +13,7 @@ class Game(entityx.Entity):
         self.staticMap = [[None]*5 for i in range(5)]
         self.moveableMap = [[None]*5 for i in range(5)]
         self.inputResponder = self.Component(InputResponder)
+        self.level = 1
         
         self.GenerateLevelLayout([[TileType.wall, TileType.wall, TileType.wall, TileType.wall, TileType.wall], 
                             [TileType.wall, TileType.floor, TileType.floor, TileType.floor, TileType.wall],
@@ -23,10 +24,12 @@ class Game(entityx.Entity):
         self.nickCage = Tile(TileType.nickCage, 1, 1, Stats(5, 1))
         self.moveableMap[1][1] = self.nickCage
         self.moveableMap[2][1] = Tile(TileType.chest, 2, 1, upgrade = Upgrade(1, 1))
-        self.moveableMap[1][2] = Tile(TileType.clue, 1, 2)
+        self.moveableMap[1][2] = Tile(TileType.clue, 1, 2, upgrade = Upgrade(level = 1))
 
     def update(self, dt):
         # Move Nick Cage based on InputResponder
+        self.nickCage.body.direction.x = 0
+        self.nickCage.body.direction.y = 0
         input_events = self.inputResponder.responds
         if "-MoveUp" in input_events:
             print "Move Up"
@@ -57,6 +60,7 @@ class Game(entityx.Entity):
                     if tileInNewPosition != None and tileInNewPosition != tile:
                         if tileInNewPosition.stats != None and tile.stats != None:
                             # Do damage to each other
+                            print "Combat detected."
                             tileInNewPosition.stats.health -= tile.stats.weapon
                             tile.stats.health -= tileInNewPosition.stats.weapon
                             if tile.stats.health <= 0:
@@ -71,30 +75,36 @@ class Game(entityx.Entity):
                                 print "Upgrade obtained!"
                                 tile.stats.health += tileInNewPosition.upgrade.health
                                 tile.stats.weapon += tileInNewPosition.upgrade.weapon
+                                self.level += tileInNewPosition.upgrade.level
                                 tileInNewPosition.destroyed = tileInNewPosition.Component(Destroyed) # Destroy the upgrade (single-use)
-                                tile.gameBody.x = newTileX
-                                tile.gameBody.y = newTileY
                                 tile.gameBody.canMove = True
-                            elif self.staticMap[newTileX][newTileY].tileType != TileType.wall:
-                                tile.gameBody.x = newTileX
-                                tile.gameBody.y = newTileY
-                                tile.gameBody.canMove = True
-                            else:
-                                print "Trying to wall hack?"
-                                tile.gameBody.canMove = False
-                    elif tileInNewPosition != tile:
+                    elif tileInNewPosition == None and self.staticMap[newTileX][newTileY].tileType != TileType.wall:
+                        print "Normal movement detected."
                         tile.gameBody.canMove = True
                     else:
                         tile.gameBody.canMove = False
-                        
-        # Movement loop. If the tile can move, do it.
+                    
+                    if tile.gameBody.canMove:
+                        tile.gameBody.x = newTileX
+                        tile.gameBody.y = newTileY
+                    
+        
+        # Reset all updated flags before doing movement
         for x in range(0, len(self.moveableMap)):
             for y in range(0, len(self.moveableMap[x])):
                 tile = self.moveableMap[x][y]
                 if tile != None:
+                    tile.gameBody.updated = False
+        
+        # Movement loop. If the tile can move, do it.
+        for x in range(0, len(self.moveableMap)):
+            for y in range(0, len(self.moveableMap[x])):
+                tile = self.moveableMap[x][y]
+                if tile != None and tile.gameBody.updated == False:
                     if tile.gameBody.canMove == True:
                         # Sync the map to wherever the entity thinks it is
-                        self.moveableMap[tile.gameBody.x][tile.gameBody.x] = tile
+                        print "Syncing map with entity position"
+                        self.moveableMap[tile.gameBody.x][tile.gameBody.y] = tile
                         self.moveableMap[x][y] = None
                     else:
                         # Revert any movement that may have tried to occur
@@ -104,6 +114,7 @@ class Game(entityx.Entity):
                     # Sync the physical body based on the tile position
                     tile.body.position.x = tile.gameBody.x * TILESIZE_X
                     tile.body.position.y = tile.gameBody.y * TILESIZE_Y
+                    tile.gameBody.updated = True
     
     def GenerateLevelLayout(self, tileMap):
         for x in range(0, len(tileMap)):

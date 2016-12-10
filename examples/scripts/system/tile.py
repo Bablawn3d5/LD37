@@ -42,19 +42,13 @@ class GameBody(object):
         self.x = 0
         self.y = 0
         self.canMove = True
-
-    def update(self, dt):
-        # Do nothing.
-        self.updated = True
+        self.updated = False
 
 class Upgrade(object):
-    def __init__(self, health = 0, weapon = 0):
+    def __init__(self, health = 0, weapon = 0, level = 0):
         self.health = health
         self.weapon = weapon
-        
-    def update(self, dt):
-        # Do nothing.
-        self.updated = True
+        self.level = level
         
 class TileType(object):
     wall = 1
