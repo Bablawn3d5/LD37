@@ -26,6 +26,7 @@ class Game(entityx.Entity):
         self.moveableMap[2][1] = Tile(TileType.chest, 2, 1, upgrade = Upgrade(1, 1))
         self.moveableMap[1][2] = Tile(TileType.clue, 1, 2, upgrade = Upgrade(level = 1))
         self.moveableMap[2][4] = Tile(TileType.door, 2, 4, stats = Stats(0,0))
+        self.moveableMap[3][6] = Tile(TileType.fbi, 3, 6, stats = Stats(2,1))
 
     def update(self, dt):
         # Move Nick Cage based on InputResponder
@@ -64,10 +65,14 @@ class Game(entityx.Entity):
                             print "Combat detected."
                             tileInNewPosition.stats.health -= tile.stats.weapon
                             tile.stats.health -= tileInNewPosition.stats.weapon
+                            # Destroy entities if <= 0 HP, and manually cleanup the map
+                            # since we only reconcile changes if movement happens (below)
                             if tile.stats.health <= 0:
                                 tile.destroyed = tile.Component(Destroyed)
+                                self.moveableMap[x][y] = None
                             if tileInNewPosition.stats.health <= 0:
                                 tileInNewPosition.destroyed = tileInNewPosition.Component(Destroyed)
+                                self.moveableMap[newTileX][newTileY] = None
                             tileInNewPosition.gameBody.canMove = False
                             tile.gameBody.canMove = False
                         else:
