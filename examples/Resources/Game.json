@@ -1,6 +1,13 @@
 {
+    "body" : {
+        "position" : [-199, -199]
+    },
     "pythons" : {
         "modulename" : "system.game",
         "class" : "Game"
+    },
+    "renderable" : {
+        "texture" : "./images/Tiles.ase",
+        "currentAnim" : "FBI"
     }
 }

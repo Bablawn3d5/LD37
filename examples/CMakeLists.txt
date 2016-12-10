@@ -42,6 +42,7 @@ file(GLOB ExampleResources
     ${FarquaadExamples_SOURCE_DIR}/Resources/Loader.json
     ${FarquaadExamples_SOURCE_DIR}/Resources/Game.json
     ${FarquaadExamples_SOURCE_DIR}/images/Bar.ase
+    ${FarquaadExamples_SOURCE_DIR}/images/Tiles.ase
     ${PYTHON27_STD_ZIP})
 
 add_custom_target(CopyExampleResources DEPENDS ${ExampleResources})
