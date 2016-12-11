@@ -15,6 +15,7 @@ class Game(entityx.Entity):
         self.fogofwar    = [[None]*9 for i in range(5)]
         self.inputResponder = self.Component(InputResponder)
         self.level = 1
+        self.lightLevel = 2
         
         self.GenerateLevelLayout(self.staticMap, [[TileType.wall, TileType.wall, TileType.wall, TileType.wall, TileType.wall, TileType.wall, TileType.wall, TileType.wall, TileType.wall], 
                             [TileType.wall, TileType.floor, TileType.floor, TileType.floor, TileType.wall, TileType.floor, TileType.floor, TileType.floor, TileType.wall],
@@ -30,6 +31,11 @@ class Game(entityx.Entity):
         self.moveableMap[1][2] = Tile(TileType.clue, 1, 2, upgrade = Upgrade(level = 1))
         self.moveableMap[2][4] = Tile(TileType.door, 2, 4, stats = Stats(0,0))
         self.moveableMap[3][6] = Tile(TileType.fbi, 3, 6, stats = Stats(2,1))
+
+    # Returns true if a given gameTileX gameTileY is occupied by items in types
+    def isOccupied(self, tileX, tileY, types = [TileType.wall, TileType.door]):
+        return (self.moveableMap[tileX][tileY] != None and self.moveableMap[tileX][tileY].tileType in types) or 
+        (self.staticMap[tileX][tileY] != None and self.staticMap[tileX][tileY].tileType in types) 
 
     def update(self, dt):
         # Move Nick Cage based on InputResponder
@@ -57,17 +63,23 @@ class Game(entityx.Entity):
         for x in range(0, len(self.fogofwar)):
             for y in range(0, len(self.fogofwar[x])):
                 dist2 = (x - self.nickCage.gameBody.x)**2 + (y -self.nickCage.gameBody.y) ** 2 
-                if( dist2 < 3 ):
+                if( dist2 < self.lightLevel + 2 ):
                     self.fogofwar[x][y].setTile(TileType.fow0)
-                elif( dist2 < 5 ):
+                elif( dist2 < self.lightLevel + 5 ):
                     self.fogofwar[x][y].setTile(TileType.fow1)
-                elif( dist2 < 8 ):
+                elif( dist2 < self.lightLevel + 10 ):
                     self.fogofwar[x][y].setTile(TileType.fow2)
                 else:
                     self.fogofwar[x][y].setTile(TileType.fow3)
 
-        # TODO(SMA) : Light up areas based on Line of Sight
-
+        # Light up areas based on Line of Sight
+        direciotns = [ (-1,1), (0,1), (1,1), 
+                       (-1,0), (1,0),
+                       (-1,-1), (0,-1) (1,-1) ]
+        # for light_direction in direction:
+        #     lit_x = self.nickCage.gameBody.x + light_direction.x * self.lightLevel
+        #     lit_y = self.nickCage.gameBody.y + light_direction.y * self.lightLevel
+        #     if()
         
         # Damage loop. If damage is dealt, indicate that the tile cannot move
         for x in range(0, len(self.moveableMap)):
