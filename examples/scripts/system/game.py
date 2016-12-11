@@ -58,7 +58,6 @@ class Game(entityx.Entity):
         self.fogofwar    = [[None]*LEVEL_WIDTH for i in range(LEVEL_WIDTH)]
         self.inputResponder = self.Component(InputResponder)
         self.level = 1
-        self.lightlevel = 1
         
         # Cover everything in fog tiles
         #self.moveableMap[1][1] = self.nickCage
@@ -74,7 +73,7 @@ class Game(entityx.Entity):
         self.GenerateLevelLayout(self.fogofwar, [[TileType.fow3]*LEVEL_WIDTH for i in range(LEVEL_WIDTH)])
         
         spawn = spawnRoom.center()
-        self.nickCage = self.addMoveable( Tile(TileType.nickCage, spawn.x, spawn.y, Stats(10, 1)) )
+        self.nickCage = self.addMoveable( Tile(TileType.nickCage, spawn.x, spawn.y, Stats(10, 1, light = 0)) )
         self.addMoveable( Tile(TileType.clue, spawn.x, spawn.y-1, upgrade = Upgrade(level=1)) )
         self.addMoveable( Tile(TileType.chest, spawn.x+1, spawn.y, upgrade = Upgrade(5, 1)) )
         self.addMoveable( Tile(TileType.torch, spawn.x-1, spawn.y, upgrade = Upgrade(light = 1)) )
