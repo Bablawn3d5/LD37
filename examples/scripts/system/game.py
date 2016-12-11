@@ -3,10 +3,15 @@ from _entityx_components import Body, Renderable, InputResponder, Destroyed
 from gamemath import vector2
 from system.tile import Tile, TileType, Stats, Upgrade
 import sys
+import Queue
+import time
+import collections
 Vector2 = vector2.Vector2
 
 TILESIZE_X = 32
 TILESIZE_Y = 32
+
+GameCoord = collections.namedtuple("GameCoord", "x y")
 
 class Game(entityx.Entity):
     def __init__(self):
@@ -28,6 +33,47 @@ class Game(entityx.Entity):
         self.moveableMap[2][4] = Tile(TileType.door, 2, 4, stats = Stats(0,0))
         self.moveableMap[3][6] = Tile(TileType.fbi, 3, 6, stats = Stats(2,1))
 
+    def bfs(self, start, end):
+        frontier = Queue.Queue()
+        frontier.put(start)
+        came_from = {}
+        came_from[start] = None
+        while not frontier.empty():
+            current = frontier.get()
+            if current == end:
+                break
+                
+            left = GameCoord(current.x - 1,current.y)
+            right = GameCoord(current.x + 1,current.y)
+            up = GameCoord(current.x ,current.y - 1)
+            down = GameCoord(current.x,current.y + 1)
+            if self.staticMap[left.x][left.y] != None and self.staticMap[left.x][left.y].tileType != TileType.wall and self.moveableMap[left.x][left.y] == None and not came_from.has_key(left):
+                came_from[left] = current
+                frontier.put(left)
+            if self.staticMap[right.x][right.y] != None and self.staticMap[right.x][right.y].tileType != TileType.wall and self.moveableMap[right.x][right.y] == None and not came_from.has_key(right):
+                came_from[right] = current
+                frontier.put(right)
+            if self.staticMap[up.x][up.y] != None and self.staticMap[up.x][up.y].tileType != TileType.wall and self.moveableMap[up.x][up.y] == None and not came_from.has_key(up):
+                came_from[up] = current
+                frontier.put(up)
+            if self.staticMap[down.x][down.y] != None and self.staticMap[down.x][down.y].tileType != TileType.wall and self.moveableMap[down.x][down.y] == None and not came_from.has_key(down):
+                came_from[down] = current
+                frontier.put(down)
+        return came_from
+        
+    def getPath(self, start, end):
+        came_from = self.bfs(start, end)
+        if not end in came_from.keys():
+            print "No AI path found!"
+            return None
+        current = end
+        path = [end]
+        while not current == start:
+            current = came_from[current]
+            path.append(current)
+        path.reverse()
+        return path
+        
     def update(self, dt):
         # Move Nick Cage based on InputResponder
         self.nickCage.body.direction.x = 0
@@ -49,6 +95,21 @@ class Game(entityx.Entity):
             print "Move Left"
             self.nickCage.body.direction.x = -1
             self.nickCage.body.direction.y = 0
+        
+        # Calculate the direction of FBI (AI)
+        for x in range(0, len(self.moveableMap)):
+            for y in range(0, len(self.moveableMap[x])):
+                tile = self.moveableMap[x][y]
+                if tile != None and tile.tileType == TileType.fbi:
+                    path = self.getPath(GameCoord(tile.gameBody.x, tile.gameBody.y), GameCoord(self.nickCage.gameBody.x, self.nickCage.gameBody.y))
+                    print str(path)
+                    if path != None:
+                        tile.body.direction.x = path[1].x - tile.gameBody.x
+                        tile.body.direction.y = path[1].y - tile.gameBody.y
+                    else:
+                        tile.body.direction.x = 0
+                        tile.body.direction.y = 0
+                    
         
         # Damage loop. If damage is dealt, indicate that the tile cannot move
         for x in range(0, len(self.moveableMap)):
