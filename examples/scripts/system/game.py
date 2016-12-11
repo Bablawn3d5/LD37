@@ -168,6 +168,7 @@ class Game(entityx.Entity):
                                 tile.stats.weapon += tileInNewPosition.upgrade.weapon
                                 self.level += tileInNewPosition.upgrade.level
                                 tileInNewPosition.destroyed = tileInNewPosition.Component(Destroyed) # Destroy the upgrade (single-use)
+                                self.moveableMap[newTileX][newTileY] = None
                                 tile.gameBody.canMove = True
                     elif tileInNewPosition == None and self.staticMap[newTileX][newTileY].tileType != TileType.wall:
                         print "Normal movement detected."
@@ -192,7 +193,7 @@ class Game(entityx.Entity):
             for y in range(0, len(self.moveableMap[x])):
                 tile = self.moveableMap[x][y]
                 if tile != None and tile.gameBody.updated == False:
-                    if tile.gameBody.canMove == True:
+                    if tile.gameBody.canMove == True and self.moveableMap[tile.gameBody.x][tile.gameBody.y] == None:
                         # Sync the map to wherever the entity thinks it is
                         print "Syncing map with entity position"
                         self.moveableMap[tile.gameBody.x][tile.gameBody.y] = tile
