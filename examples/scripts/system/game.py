@@ -41,7 +41,17 @@ class RoomInfo(object):
     def center(self):
         return GameCoord(int((2*self.x + self.width)/2), int((2*self.y + self.height)/2));
 
+    # Returns a random xy for a given room
+    def randomXY(self):
+        spawnX = randint(self.x + 1, self.x + self.width - 1)
+        spawnY = randint(self.y + 1, self.y + self.height - 1)
+        return GameCoord(spawnX, spawnY)
+
 class Game(entityx.Entity):
+    # Tile that is the center of the playing area
+    SCREEN_TILE_CENTER_X = 16
+    SCREEN_TILE_CENTER_Y = 8
+
     def __init__(self):
         self.staticMap   = [[TileType.wall]*LEVEL_WIDTH for i in range(LEVEL_WIDTH)]
         self.moveableMap = [[None]*LEVEL_WIDTH for i in range(LEVEL_WIDTH)]
@@ -63,25 +73,27 @@ class Game(entityx.Entity):
         #self.moveableMap[3][6] = Tile(TileType.fbi, 3, 6, stats = Stats(2,1))
         
         self.GenerateLevel(3)
-        
-        spawnRoom = self.rooms[randint(0, len(self.rooms) - 1)];
-        spawnX = randint(spawnRoom.x + 1, spawnRoom.x + spawnRoom.width - 1)
-        spawnY = randint(spawnRoom.y + 1, spawnRoom.y + spawnRoom.height - 1)
-        self.nickCage = Tile(TileType.nickCage, spawnX, spawnY, Stats(10, 1))
-        self.moveableMap[spawnX][spawnY] = self.nickCage
-        
         self.GenerateLevelLayout(self.staticMap, self.staticMap)
         self.GenerateLevelLayout(self.fogofwar, [[TileType.fow3]*LEVEL_WIDTH for i in range(LEVEL_WIDTH)])
+        
+        spawnRoom = self.rooms[randint(0, len(self.rooms) - 1)];
+        spawn = spawnRoom.randomXY()
+        self.nickCage = Tile(TileType.nickCage, spawn.x, spawn.y, Stats(10, 1))
+        self.moveableMap[spawn.x][spawn.y] = self.nickCage
+        
+        self.sync_bodies(-1*self.nickCage.gameBody.x + Game.SCREEN_TILE_CENTER_X, -1*self.nickCage.gameBody.y + Game.SCREEN_TILE_CENTER_Y)
 
     # Returns true if a given gameTileX gameTileY is occupied by items in types
     def isOccupied(self, tileX, tileY, types = [TileType.wall, TileType.door]):
         return (self.moveableMap[tileX][tileY] != None and self.moveableMap[tileX][tileY].tileType in types) or (self.staticMap[tileX][tileY] != None and self.staticMap[tileX][tileY].tileType in types)
 
-    def GenerateLevel(self, numRooms):
+    def GenerateLevel(self, numRooms, maxAttempts = 200):
         self.rooms = []
+        attempts = 0
         for i in range(0, numRooms):
             failed = True
-            while failed:
+            while failed and attempts <= maxAttempts:
+                attempts += 1
                 width = MIN_ROOM_WIDTH + randint(0, MAX_ROOM_WIDTH - MIN_ROOM_WIDTH + 1)
                 height = MIN_ROOM_HEIGHT + randint(0, MAX_ROOM_HEIGHT - MIN_ROOM_HEIGHT + 1)
                 x = randint(0, LEVEL_WIDTH - width - 1) + 1
@@ -310,11 +322,36 @@ class Game(entityx.Entity):
                         # Revert any movement that may have tried to occur
                         tile.gameBody.x = x
                         tile.gameBody.y = y
-                        
-                    # Sync the physical body based on the tile position
-                    tile.body.position.x = tile.gameBody.x * TILESIZE_X
-                    tile.body.position.y = tile.gameBody.y * TILESIZE_Y
-                    tile.gameBody.updated = True
+
+        self.sync_bodies(-1*self.nickCage.gameBody.x + Game.SCREEN_TILE_CENTER_X, -1*self.nickCage.gameBody.y + Game.SCREEN_TILE_CENTER_Y)
+
+    def sync_bodies(self, shiftX = 0, shiftY = 0):
+        for row in self.moveableMap:
+            for tile in row:
+                if tile is None:
+                    continue                        
+                # Sync the physical body based on the tile position
+                tile.body.position.x = (tile.gameBody.x + shiftX) * TILESIZE_X
+                tile.body.position.y = (tile.gameBody.y + shiftY) * TILESIZE_Y
+                tile.gameBody.updated = True
+
+        for row in self.staticMap:
+            for tile in row:        
+                if tile is None:
+                    continue                            
+                # Sync the physical body based on the tile position
+                tile.body.position.x = (tile.gameBody.x + shiftX) * TILESIZE_X
+                tile.body.position.y = (tile.gameBody.y + shiftY) * TILESIZE_Y
+                tile.gameBody.updated = True
+
+        for row in self.fogofwar:
+            for tile in row:            
+                if tile is None:
+                    continue                        
+                # Sync the physical body based on the tile position
+                tile.body.position.x = (tile.gameBody.x + shiftX) * TILESIZE_X
+                tile.body.position.y = (tile.gameBody.y + shiftY) * TILESIZE_Y
+                tile.gameBody.updated = True
     
     def GenerateLevelLayout(self, targetMap, tileMap):
         for x in range(0, len(tileMap)):

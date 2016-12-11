@@ -1,6 +1,6 @@
 {
   "app_title" : "LD 37: Adentures of Nick Cage",
-  "clear_color" : [95,195,215],
+  "clear_color" : [0,0,0],
   "keys" : {
     "MoveUp" : "KEY_W",
     "MoveDown" : "KEY_S",
