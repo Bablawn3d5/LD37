@@ -60,11 +60,6 @@ class Game(entityx.Entity):
         self.level = 1
         self.lightlevel = 1
         
-        #self.GenerateLevelLayout(self.staticMap, [[TileType.wall, TileType.wall, TileType.wall, TileType.wall, TileType.wall, TileType.wall, TileType.wall, TileType.wall, TileType.wall], 
-        #                    [TileType.wall, TileType.floor, TileType.floor, TileType.floor, TileType.wall, TileType.lava, TileType.floor, TileType.floor, TileType.wall],
-        #                    [TileType.wall, TileType.floor, TileType.floor, TileType.floor, TileType.floor, TileType.floor, TileType.floor, TileType.floor, TileType.wall],
-        #                    [TileType.wall, TileType.floor, TileType.floor, TileType.floor, TileType.wall, TileType.floor, TileType.floor, TileType.floor, TileType.wall],
-        #                    [TileType.wall, TileType.wall, TileType.wall, TileType.wall, TileType.wall, TileType.wall, TileType.wall, TileType.wall, TileType.wall]]);
         # Cover everything in fog tiles
         #self.moveableMap[1][1] = self.nickCage
         #self.moveableMap[2][1] = Tile(TileType.chest, 2, 1, upgrade = Upgrade(1, 1))
@@ -72,37 +67,54 @@ class Game(entityx.Entity):
         #self.moveableMap[2][4] = Tile(TileType.door, 2, 4, stats = Stats(0,0))
         #self.moveableMap[3][6] = Tile(TileType.fbi, 3, 6, stats = Stats(2,1))
         
-        self.GenerateLevel(3)
+        # Generate five random rooms
+        self.rooms = self.GenerateLevel([None,None,None,None,RoomInfo(3,3,1,1)])
+        spawnRoom = self.rooms[-1]
         self.GenerateLevelLayout(self.staticMap, self.staticMap)
         self.GenerateLevelLayout(self.fogofwar, [[TileType.fow3]*LEVEL_WIDTH for i in range(LEVEL_WIDTH)])
         
-        spawnRoom = self.rooms[randint(0, len(self.rooms) - 1)];
-        spawn = spawnRoom.randomXY()
-        self.nickCage = Tile(TileType.nickCage, spawn.x, spawn.y, Stats(10, 1))
-        self.moveableMap[spawn.x][spawn.y] = self.nickCage
-        
+        spawn = spawnRoom.center()
+        self.nickCage = self.addMoveable( Tile(TileType.nickCage, spawn.x, spawn.y, Stats(10, 1)) )
+        self.addMoveable( Tile(TileType.clue, spawn.x, spawn.y-1, upgrade = Upgrade(level=1)) )
+        self.addMoveable( Tile(TileType.chest, spawn.x+1, spawn.y, upgrade = Upgrade(5, 1)) )
+        self.addMoveable( Tile(TileType.torch, spawn.x-1, spawn.y, upgrade = Upgrade(light = 1)) )
+        self.addMoveable( Tile(TileType.torch, spawn.x-1, spawn.y+1, upgrade = Upgrade(light = 1)) )
+
         self.sync_bodies(-1*self.nickCage.gameBody.x + Game.SCREEN_TILE_CENTER_X, -1*self.nickCage.gameBody.y + Game.SCREEN_TILE_CENTER_Y)
+
+    def addMoveable(self, tile):
+        self.moveableMap[tile.gameBody.x][tile.gameBody.y] = tile
+        return tile
 
     # Returns true if a given gameTileX gameTileY is occupied by items in types
     def isOccupied(self, tileX, tileY, types = [TileType.wall, TileType.door]):
         return (self.moveableMap[tileX][tileY] != None and self.moveableMap[tileX][tileY].tileType in types) or (self.staticMap[tileX][tileY] != None and self.staticMap[tileX][tileY].tileType in types)
 
-    def GenerateLevel(self, numRooms, maxAttempts = 200):
-        self.rooms = []
+    # Generates a bunch of rooms that will produce a 'level' containing a bunch of rooms.
+    # Rooms are garanteed to not overlap, and not spawn beside eachother.
+    def GenerateLevel(self, rooms, maxAttempts = 200):
+        genRooms = []
         attempts = 0
-        for i in range(0, numRooms):
+        for room in rooms:
             failed = True
+            randomRoom = False
+            # If user passes in 'none' in room type, then generate a random room.
+            if room is None:
+                randomRoom = True
             while failed and attempts <= maxAttempts:
                 attempts += 1
-                width = MIN_ROOM_WIDTH + randint(0, MAX_ROOM_WIDTH - MIN_ROOM_WIDTH + 1)
-                height = MIN_ROOM_HEIGHT + randint(0, MAX_ROOM_HEIGHT - MIN_ROOM_HEIGHT + 1)
-                x = randint(0, LEVEL_WIDTH - width - 1) + 1
-                y = randint(0, LEVEL_HEIGHT - height - 1) + 1
-                room = RoomInfo(width, height, x , y)
+                if randomRoom == True:
+                    width = MIN_ROOM_WIDTH + randint(0, MAX_ROOM_WIDTH - MIN_ROOM_WIDTH + 1)
+                    height = MIN_ROOM_HEIGHT + randint(0, MAX_ROOM_HEIGHT - MIN_ROOM_HEIGHT + 1)
+                    room = RoomInfo(width, height, 0 , 0)
+                # Randomly move the room around the level
+                room.x = randint(0, LEVEL_WIDTH - width - 1) + 1
+                room.y = randint(0, LEVEL_HEIGHT - height - 1) + 1
                 
                 failed = False
-                for j in range(0, len(self.rooms)):
-                    if room.intersects(self.rooms[j]):
+                # Check to see if the room fits on the map using the x,y cordinates chosen
+                for oldRoom in genRooms:
+                    if room.intersects(oldRoom):
                         failed = True
                         break
                         
@@ -112,27 +124,31 @@ class Game(entityx.Entity):
                         for y in range(room.y, room.y + room.height):
                             self.staticMap[x][y] = TileType.floor
                             
-                    if len(self.rooms) != 0:
-                        # clear out hallways
-                        prevRoom = self.rooms[len(self.rooms) - 1]
-                        prevRoomCenter = prevRoom.center();
-                        newRoomCenter = room.center();
-                        print str(prevRoomCenter) + " " + str(newRoomCenter)
+                    if len(genRooms) != 0:
+                        # Connect previous room to newest room
+                        prevRoom = genRooms[-1]
+                        self.connectRooms(prevRoom, room)
                         
-                        if randint(0, 2) == 1:
-                            self.placeHorizontalHallway(prevRoomCenter.x, newRoomCenter.x, prevRoomCenter.y)
-                            #self.placeHorizontalHallway2(prevRoom, room)
-                            self.placeVerticalHallway(prevRoomCenter.y, newRoomCenter.y, newRoomCenter.x)
-                            #self.placeVerticalHallway2(prevRoom, room)
-                        else:
-                            self.placeVerticalHallway(prevRoomCenter.y, newRoomCenter.y, newRoomCenter.x)
-                            #self.placeVerticalHallway2(prevRoom, room)
-                            self.placeHorizontalHallway(prevRoomCenter.x, newRoomCenter.x, prevRoomCenter.y)
-                            #self.placeHorizontalHallway2(prevRoom, room)
-                        
-                    self.rooms.append(room)
+                    genRooms.append(room)
                     print room
-    
+        return genRooms
+    # Joins room one with room two with a hallway
+    def connectRooms(self, roomOne, roomTwo):                        
+        prevRoomCenter = roomOne.center()
+        newRoomCenter = roomTwo.center()                    
+        print str(prevRoomCenter) + " " + str(newRoomCenter)
+        # Randomly join rooms verticaly or horizontally first
+        if randint(0, 2) == 1:
+            self.placeHorizontalHallway(prevRoomCenter.x, newRoomCenter.x, prevRoomCenter.y)
+            self.placeVerticalHallway(prevRoomCenter.y, newRoomCenter.y, newRoomCenter.x)
+            #self.placeHorizontalHallway2(prevRoom, room)
+            #self.placeVerticalHallway2(prevRoom, room)
+        else:
+            self.placeVerticalHallway(prevRoomCenter.y, newRoomCenter.y, newRoomCenter.x)
+            self.placeHorizontalHallway(prevRoomCenter.x, newRoomCenter.x, prevRoomCenter.y)
+            #self.placeVerticalHallway2(prevRoom, room)
+            #self.placeHorizontalHallway2(prevRoom, room)
+
     def placeHorizontalHallway(self, x1, x2, y):
         for x in range(min(x1, x2), max(x1, x2) + 1):
             self.staticMap[x][y] = TileType.floor
@@ -223,11 +239,11 @@ class Game(entityx.Entity):
             for y in range(0, len(self.fogofwar[x])):
                 lit_obj = self.nickCage
                 dist2 = (x - lit_obj.gameBody.x)**2 + (y -lit_obj.gameBody.y) ** 2 
-                if( dist2 < lit_obj.stats.lightlevel + 3 ):
+                if( dist2 < (lit_obj.stats.lightlevel + 1.5)**2 ):
                     self.fogofwar[x][y].setTile(TileType.fow0)
-                elif( dist2 < lit_obj.stats.lightlevel + 5 ):
+                elif( dist2 < (lit_obj.stats.lightlevel + 2.5)**2 ):
                     self.fogofwar[x][y].setTile(TileType.fow1)
-                elif( dist2 < lit_obj.stats.lightlevel + 10 ):
+                elif( dist2 < (lit_obj.stats.lightlevel + 3.5)**2 ):
                     self.fogofwar[x][y].setTile(TileType.fow2)
                 else:
                     if(self.fogofwar[x][y].tileType == TileType.fow3):
