@@ -51,7 +51,7 @@ class Game(entityx.Entity):
         self.fogofwar    = [[None]*LEVEL_WIDTH for i in range(LEVEL_WIDTH)]
         self.inputResponder = self.Component(InputResponder)
         self.level = 1
-        self.lightLevel = 2000
+        self.lightlevel = 1
         
         #self.GenerateLevelLayout(self.staticMap, [[TileType.wall, TileType.wall, TileType.wall, TileType.wall, TileType.wall, TileType.wall, TileType.wall, TileType.wall, TileType.wall], 
         #                    [TileType.wall, TileType.floor, TileType.floor, TileType.floor, TileType.wall, TileType.lava, TileType.floor, TileType.floor, TileType.wall],
@@ -59,7 +59,6 @@ class Game(entityx.Entity):
         #                    [TileType.wall, TileType.floor, TileType.floor, TileType.floor, TileType.wall, TileType.floor, TileType.floor, TileType.floor, TileType.wall],
         #                    [TileType.wall, TileType.wall, TileType.wall, TileType.wall, TileType.wall, TileType.wall, TileType.wall, TileType.wall, TileType.wall]]);
         # Cover everything in fog tiles
-
         #self.moveableMap[1][1] = self.nickCage
         #self.moveableMap[2][1] = Tile(TileType.chest, 2, 1, upgrade = Upgrade(1, 1))
         #self.moveableMap[1][2] = Tile(TileType.clue, 1, 2, upgrade = Upgrade(level = 1))
@@ -213,15 +212,17 @@ class Game(entityx.Entity):
         # Update fog of war based on NC's position
         for x in range(0, len(self.fogofwar)):
             for y in range(0, len(self.fogofwar[x])):
-                dist2 = (x - self.nickCage.gameBody.x)**2 + (y -self.nickCage.gameBody.y) ** 2 
-                if( dist2 < self.lightLevel + 2 ):
+                lit_obj = self.nickCage
+                dist2 = (x - lit_obj.gameBody.x)**2 + (y -lit_obj.gameBody.y) ** 2 
+                if( dist2 < lit_obj.stats.lightlevel + 3 ):
                     self.fogofwar[x][y].setTile(TileType.fow0)
-                elif( dist2 < self.lightLevel + 5 ):
+                elif( dist2 < lit_obj.stats.lightlevel + 5 ):
                     self.fogofwar[x][y].setTile(TileType.fow1)
-                elif( dist2 < self.lightLevel + 10 ):
+                elif( dist2 < lit_obj.stats.lightlevel + 10 ):
                     self.fogofwar[x][y].setTile(TileType.fow2)
                 else:
-                    self.fogofwar[x][y].setTile(TileType.fow3)
+                    if(self.fogofwar[x][y].tileType == TileType.fow3):
+                        self.fogofwar[x][y].setTile(TileType.fow3)
 
         if self.nickCage.body.direction.x == 0 and self.nickCage.body.direction.y == 0:
             return # Nothing more to do for this frame
@@ -272,6 +273,7 @@ class Game(entityx.Entity):
                                 print "Upgrade obtained!"
                                 tile.stats.health += tileInNewPosition.upgrade.health
                                 tile.stats.weapon += tileInNewPosition.upgrade.weapon
+                                tile.stats.lightlevel += tileInNewPosition.upgrade.lightlevel
                                 self.level += tileInNewPosition.upgrade.level
                                 tileInNewPosition.destroyed = tileInNewPosition.Component(Destroyed) # Destroy the upgrade (single-use)
                                 self.moveableMap[newTileX][newTileY] = None

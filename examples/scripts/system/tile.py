@@ -32,10 +32,10 @@ class Tile(entityx.Entity):
         self.renderable.currentAnim = TileType.GetName(self.tileType)
         
 class Stats(object):
-    def __init__(self, health = 0, weapon = 1):
+    def __init__(self, health = 0, weapon = 1, light = 1):
         self.health = health
         self.weapon = weapon
-
+        self.lightlevel = light
     def update(self, dt):
         # Do nothing.
         self.updated = True
@@ -48,10 +48,11 @@ class GameBody(object):
         self.updated = False
 
 class Upgrade(object):
-    def __init__(self, health = 0, weapon = 0, level = 0):
+    def __init__(self, health = 0, weapon = 0, level = 0, light = 0):
         self.health = health
         self.weapon = weapon
         self.level = level
+        self.lightlevel = light
         
 class TileType(object):
     wall = 1
@@ -67,6 +68,8 @@ class TileType(object):
     fow1 = 10
     fow2 = 11
     fow3 = 12
+
+    torch = 13
     
     @classmethod
     def GetName(self, tileType):
@@ -82,6 +85,7 @@ class TileType(object):
                 self.fow1 : "FoW1",
                 self.fow2 : "FoW2",
                 self.fow3 : "FoW3",
+                self.torch : "Torch",
                 }.get(tileType, self.wall)
                 
     @classmethod
@@ -94,6 +98,7 @@ class TileType(object):
                 self.lava : 0,
                 self.nickCage : 1,
                 self.fbi : 1,
+                self.torch : 1,
                 self.fow0 : 2,
                 self.fow1 : 2,
                 self.fow2 : 2,
