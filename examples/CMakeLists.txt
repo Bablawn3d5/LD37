@@ -34,15 +34,23 @@ file(GLOB ExampleResources
     ${SCRIPTDIR}/system/__init__.py
     ${SCRIPTDIR}/system/loader.py
     ${SCRIPTDIR}/system/game.py
+    ${SCRIPTDIR}/system/HUD.py
     ${SCRIPTDIR}/system/tile.py
+    ${SCRIPTDIR}/system/eventur.py
     ${SCRIPTDIR}/gamemath/__init__.py
     ${SCRIPTDIR}/gamemath/vector2.py
     ${SCRIPTDIR}/gamemath/util.py
     ${FarquaadExamples_SOURCE_DIR}/Config.json
     ${FarquaadExamples_SOURCE_DIR}/Resources/Loader.json
     ${FarquaadExamples_SOURCE_DIR}/Resources/Game.json
+    ${FarquaadExamples_SOURCE_DIR}/Resources/Boop.json
+    ${FarquaadExamples_SOURCE_DIR}/Resources/HUD.json
+    ${FarquaadExamples_SOURCE_DIR}/Resources/Text.json
     ${FarquaadExamples_SOURCE_DIR}/images/Bar.ase
     ${FarquaadExamples_SOURCE_DIR}/images/Tiles.ase
+    ${FarquaadExamples_SOURCE_DIR}/images/HUD.ase
+    ${FarquaadExamples_SOURCE_DIR}/images/Arial.ttf
+    ${FarquaadExamples_SOURCE_DIR}/sounds/boop.wav
     ${PYTHON27_STD_ZIP})
 
 add_custom_target(CopyExampleResources DEPENDS ${ExampleResources})

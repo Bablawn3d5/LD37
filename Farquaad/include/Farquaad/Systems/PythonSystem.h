@@ -83,7 +83,7 @@ struct PythonEntity {
 
   operator ex::Entity() const { return _entity; }
 
-  virtual void update(ex::TimeDelta dt) {}
+  virtual void update(float dt) {}
 
   ex::Entity::Id _entity_id() const {
     return _entity.id();

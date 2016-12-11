@@ -1,0 +1,13 @@
+{
+    "body" : {
+        "position" : [0, 0]
+    },
+    "pythons" : {
+        "modulename" : "system.HUD",
+        "class" : "HUD"
+    },
+    "renderable" : {
+        "texture" : "./images/HUD.ase",
+        "layer" : 10
+    }
+}

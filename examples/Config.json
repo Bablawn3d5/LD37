@@ -17,6 +17,9 @@
     "./Resources/Loader.json"
   ],
   "entities" : [
-    "./Resources/Game.json"
+    "./Resources/Game.json",
+    "./Resources/Text.json",
+    "./Resources/Boop.json",
+    "./Resources/HUD.json"
   ]
 }

@@ -43,11 +43,8 @@ class RoomInfo(object):
 
 class Game(entityx.Entity):
     def __init__(self):
-        #self.staticMap   = [[None]*9 for i in range(5)]
         self.staticMap   = [[TileType.wall]*LEVEL_WIDTH for i in range(LEVEL_WIDTH)]
-        #self.moveableMap = [[None]*9 for i in range(5)]
         self.moveableMap = [[None]*LEVEL_WIDTH for i in range(LEVEL_WIDTH)]
-        #self.fogofwar    = [[None]*9 for i in range(5)]
         self.fogofwar    = [[None]*LEVEL_WIDTH for i in range(LEVEL_WIDTH)]
         self.inputResponder = self.Component(InputResponder)
         self.level = 1

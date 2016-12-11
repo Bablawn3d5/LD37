@@ -205,7 +205,7 @@ void SpriteRenderSystem::update(ex::EntityManager & em,
 
         // Draw unsorted entiteies to screen
         // In this case if it has no body its unsorted.
-        if ( should_draw ) {
+        if ( should_draw && !renderable.isDirty ) {
           this->target.draw(*renderable.drawable);
         }
       });
