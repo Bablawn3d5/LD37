@@ -15,23 +15,31 @@ GameCoord = collections.namedtuple("GameCoord", "x y")
 
 class Game(entityx.Entity):
     def __init__(self):
-        self.staticMap = [[None]*9 for i in range(5)]
+        self.staticMap   = [[None]*9 for i in range(5)]
         self.moveableMap = [[None]*9 for i in range(5)]
+        self.fogofwar    = [[None]*9 for i in range(5)]
         self.inputResponder = self.Component(InputResponder)
         self.level = 1
+        self.lightLevel = 2
         
-        self.GenerateLevelLayout([[TileType.wall, TileType.wall, TileType.wall, TileType.wall, TileType.wall, TileType.wall, TileType.wall, TileType.wall, TileType.wall], 
+        self.GenerateLevelLayout(self.staticMap, [[TileType.wall, TileType.wall, TileType.wall, TileType.wall, TileType.wall, TileType.wall, TileType.wall, TileType.wall, TileType.wall], 
                             [TileType.wall, TileType.floor, TileType.floor, TileType.floor, TileType.wall, TileType.floor, TileType.floor, TileType.floor, TileType.wall],
                             [TileType.wall, TileType.floor, TileType.floor, TileType.floor, TileType.floor, TileType.floor, TileType.floor, TileType.floor, TileType.wall],
                             [TileType.wall, TileType.floor, TileType.floor, TileType.floor, TileType.wall, TileType.floor, TileType.floor, TileType.floor, TileType.wall],
                             [TileType.wall, TileType.wall, TileType.wall, TileType.wall, TileType.wall, TileType.wall, TileType.wall, TileType.wall, TileType.wall]]);
-                
+        # Cover everything in fog tiles
+        self.GenerateLevelLayout(self.fogofwar, [[TileType.fow3]*9 for i in range(5)])
+
         self.nickCage = Tile(TileType.nickCage, 1, 1, Stats(5, 1))
         self.moveableMap[1][1] = self.nickCage
         self.moveableMap[2][1] = Tile(TileType.chest, 2, 1, upgrade = Upgrade(1, 1))
         self.moveableMap[1][2] = Tile(TileType.clue, 1, 2, upgrade = Upgrade(level = 1))
         self.moveableMap[2][4] = Tile(TileType.door, 2, 4, stats = Stats(0,0))
         self.moveableMap[3][6] = Tile(TileType.fbi, 3, 6, stats = Stats(2,1))
+
+    # Returns true if a given gameTileX gameTileY is occupied by items in types
+    def isOccupied(self, tileX, tileY, types = [TileType.wall, TileType.door]):
+        return (self.moveableMap[tileX][tileY] != None and self.moveableMap[tileX][tileY].tileType in types) or (self.staticMap[tileX][tileY] != None and self.staticMap[tileX][tileY].tileType in types)
 
     def bfs(self, start, end):
         frontier = Queue.Queue()
@@ -47,16 +55,16 @@ class Game(entityx.Entity):
             right = GameCoord(current.x + 1,current.y)
             up = GameCoord(current.x ,current.y - 1)
             down = GameCoord(current.x,current.y + 1)
-            if self.staticMap[left.x][left.y] != None and self.staticMap[left.x][left.y].tileType != TileType.wall and self.moveableMap[left.x][left.y] == None and not came_from.has_key(left):
+            if not self.isOccupied(left.x, left.y) and not came_from.has_key(left):
                 came_from[left] = current
                 frontier.put(left)
-            if self.staticMap[right.x][right.y] != None and self.staticMap[right.x][right.y].tileType != TileType.wall and self.moveableMap[right.x][right.y] == None and not came_from.has_key(right):
+            if not self.isOccupied(right.x, right.y) and not came_from.has_key(right):
                 came_from[right] = current
                 frontier.put(right)
-            if self.staticMap[up.x][up.y] != None and self.staticMap[up.x][up.y].tileType != TileType.wall and self.moveableMap[up.x][up.y] == None and not came_from.has_key(up):
+            if not self.isOccupied(up.x, up.y) and not came_from.has_key(up):
                 came_from[up] = current
                 frontier.put(up)
-            if self.staticMap[down.x][down.y] != None and self.staticMap[down.x][down.y].tileType != TileType.wall and self.moveableMap[down.x][down.y] == None and not came_from.has_key(down):
+            if not self.isOccupied(down.x, down.y) and not came_from.has_key(down):
                 came_from[down] = current
                 frontier.put(down)
         return came_from
@@ -95,7 +103,23 @@ class Game(entityx.Entity):
             print "Move Left"
             self.nickCage.body.direction.x = -1
             self.nickCage.body.direction.y = 0
-        
+
+        # Update fog of war based on NC's position
+        for x in range(0, len(self.fogofwar)):
+            for y in range(0, len(self.fogofwar[x])):
+                dist2 = (x - self.nickCage.gameBody.x)**2 + (y -self.nickCage.gameBody.y) ** 2 
+                if( dist2 < self.lightLevel + 2 ):
+                    self.fogofwar[x][y].setTile(TileType.fow0)
+                elif( dist2 < self.lightLevel + 5 ):
+                    self.fogofwar[x][y].setTile(TileType.fow1)
+                elif( dist2 < self.lightLevel + 10 ):
+                    self.fogofwar[x][y].setTile(TileType.fow2)
+                else:
+                    self.fogofwar[x][y].setTile(TileType.fow3)
+
+        if self.nickCage.body.direction.x == 0 and self.nickCage.body.direction.y == 0:
+            return # Nothing more to do for this frame
+
         # Calculate the direction of FBI (AI)
         for x in range(0, len(self.moveableMap)):
             for y in range(0, len(self.moveableMap[x])):
@@ -103,7 +127,7 @@ class Game(entityx.Entity):
                 if tile != None and tile.tileType == TileType.fbi:
                     path = self.getPath(GameCoord(tile.gameBody.x, tile.gameBody.y), GameCoord(self.nickCage.gameBody.x, self.nickCage.gameBody.y))
                     print str(path)
-                    if path != None:
+                    if path != None and len(path) > 1:
                         tile.body.direction.x = path[1].x - tile.gameBody.x
                         tile.body.direction.y = path[1].y - tile.gameBody.y
                     else:
@@ -183,7 +207,7 @@ class Game(entityx.Entity):
                     tile.body.position.y = tile.gameBody.y * TILESIZE_Y
                     tile.gameBody.updated = True
     
-    def GenerateLevelLayout(self, tileMap):
+    def GenerateLevelLayout(self, targetMap, tileMap):
         for x in range(0, len(tileMap)):
             for y in range(0, len(tileMap[x])):
-                self.staticMap[x][y] = Tile(tileMap[x][y], x, y)
+                targetMap[x][y] = Tile(tileMap[x][y], x, y)

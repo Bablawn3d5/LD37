@@ -16,17 +16,20 @@ class Tile(entityx.Entity):
         self.gameBody = GameBody()
         self.gameBody.x = tileX
         self.gameBody.y = tileY
-        self.tileType = tileType
         self.renderable = self.Component(Renderable)
         self.renderable.texture = "./images/Tiles.ase"
-        self.renderable.layer = TileType.GetLayer(self.tileType)
         self.upgrade = upgrade
+        self.setTile(tileType)
         
-        self.renderable.currentAnim = TileType.GetName(self.tileType)
 
     def update(self, dt):
         # Do nothing.
         self.updated = True
+
+    def setTile(self, tileType):
+        self.tileType = tileType
+        self.renderable.layer = TileType.GetLayer(self.tileType)
+        self.renderable.currentAnim = TileType.GetName(self.tileType)
         
 class Stats(object):
     def __init__(self, health = 0, weapon = 1):
@@ -59,6 +62,11 @@ class TileType(object):
     lava = 6
     nickCage = 7
     fbi = 8
+
+    fow0 = 9
+    fow1 = 10
+    fow2 = 11
+    fow3 = 12
     
     @classmethod
     def GetName(self, tileType):
@@ -69,7 +77,11 @@ class TileType(object):
                 self.clue : "Clue",
                 self.lava : "Lava",
                 self.nickCage : "NC",
-                self.fbi : "FBI"
+                self.fbi : "FBI",
+                self.fow0 : "FoW0",
+                self.fow1 : "FoW1",
+                self.fow2 : "FoW2",
+                self.fow3 : "FoW3",
                 }.get(tileType, self.wall)
                 
     @classmethod
@@ -81,5 +93,9 @@ class TileType(object):
                 self.clue : 1,
                 self.lava : 0,
                 self.nickCage : 1,
-                self.fbi : 1
+                self.fbi : 1,
+                self.fow0 : 2,
+                self.fow1 : 2,
+                self.fow2 : 2,
+                self.fow3 : 2,
                 }.get(tileType, self.wall)
