@@ -23,7 +23,7 @@ class Game(entityx.Entity):
         self.lightLevel = 2
         
         self.GenerateLevelLayout(self.staticMap, [[TileType.wall, TileType.wall, TileType.wall, TileType.wall, TileType.wall, TileType.wall, TileType.wall, TileType.wall, TileType.wall], 
-                            [TileType.wall, TileType.floor, TileType.floor, TileType.floor, TileType.wall, TileType.floor, TileType.floor, TileType.floor, TileType.wall],
+                            [TileType.wall, TileType.floor, TileType.floor, TileType.floor, TileType.wall, TileType.lava, TileType.floor, TileType.floor, TileType.wall],
                             [TileType.wall, TileType.floor, TileType.floor, TileType.floor, TileType.floor, TileType.floor, TileType.floor, TileType.floor, TileType.wall],
                             [TileType.wall, TileType.floor, TileType.floor, TileType.floor, TileType.wall, TileType.floor, TileType.floor, TileType.floor, TileType.wall],
                             [TileType.wall, TileType.wall, TileType.wall, TileType.wall, TileType.wall, TileType.wall, TileType.wall, TileType.wall, TileType.wall]]);
@@ -88,19 +88,15 @@ class Game(entityx.Entity):
         self.nickCage.body.direction.y = 0
         input_events = self.inputResponder.responds
         if "-MoveUp" in input_events:
-            print "Move Up"
             self.nickCage.body.direction.x = 0
             self.nickCage.body.direction.y = -1
         if "-MoveDown" in input_events:
-            print "Move Down"
             self.nickCage.body.direction.x = 0
             self.nickCage.body.direction.y = 1
         if "-MoveRight" in input_events:
-            print "Move Right"
             self.nickCage.body.direction.x = 1
             self.nickCage.body.direction.y = 0
         if "-MoveLeft" in input_events:
-            print "Move Left"
             self.nickCage.body.direction.x = -1
             self.nickCage.body.direction.y = 0
 
@@ -171,7 +167,11 @@ class Game(entityx.Entity):
                                 self.moveableMap[newTileX][newTileY] = None
                                 tile.gameBody.canMove = True
                     elif tileInNewPosition == None and self.staticMap[newTileX][newTileY].tileType != TileType.wall:
-                        print "Normal movement detected."
+                        if self.staticMap[newTileX][newTileY].tileType == TileType.lava:
+                            tile.stats.health -= self.staticMap[newTileX][newTileY].stats.weapon
+                            if tile.stats.health <= 0:
+                                tile.destroyed = tile.Component(Destroyed)
+                                self.moveableMap[x][y] = None
                         tile.gameBody.canMove = True
                     else:
                         tile.gameBody.canMove = False
@@ -195,7 +195,6 @@ class Game(entityx.Entity):
                 if tile != None and tile.gameBody.updated == False:
                     if tile.gameBody.canMove == True and self.moveableMap[tile.gameBody.x][tile.gameBody.y] == None:
                         # Sync the map to wherever the entity thinks it is
-                        print "Syncing map with entity position"
                         self.moveableMap[tile.gameBody.x][tile.gameBody.y] = tile
                         self.moveableMap[x][y] = None
                     else:
@@ -211,4 +210,7 @@ class Game(entityx.Entity):
     def GenerateLevelLayout(self, targetMap, tileMap):
         for x in range(0, len(tileMap)):
             for y in range(0, len(tileMap[x])):
-                targetMap[x][y] = Tile(tileMap[x][y], x, y)
+                if tileMap[x][y] == TileType.lava:
+                     targetMap[x][y] = Tile(tileMap[x][y], x, y, stats = Stats(0, 2))
+                else:
+                    targetMap[x][y] = Tile(tileMap[x][y], x, y)
