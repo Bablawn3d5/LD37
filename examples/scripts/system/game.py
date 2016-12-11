@@ -2,6 +2,7 @@ import entityx
 from _entityx_components import Body, Renderable, InputResponder, Destroyed
 from gamemath import vector2
 from system.tile import Tile, TileType, Stats, Upgrade
+from random import randint
 import sys
 import Queue
 import time
@@ -11,36 +12,145 @@ Vector2 = vector2.Vector2
 TILESIZE_X = 32
 TILESIZE_Y = 32
 
+MAX_ROOM_WIDTH = 10
+MIN_ROOM_WIDTH = 5
+MAX_ROOM_HEIGHT = 10
+MIN_ROOM_HEIGHT = 5
+
+LEVEL_WIDTH = 32
+LEVEL_HEIGHT = 25
+
 GameCoord = collections.namedtuple("GameCoord", "x y")
+
+class RoomInfo(object):
+    def __init__(self, width, height, x, y):
+        self.width = width
+        self.height = height
+        self.x = x
+        self.y = y
+        
+    def __repr__(self):
+        return "x: " + str(self.x) + " y: " + str(self.y) + " w: " + str(self.width) + " h: " + str(self.height)
+        
+    def intersects(self, other):
+        return self.x <= (other.x + other.width) and (self.x + self.width) >= other.x and self.y <= (other.y + other.height) and (self.y + self.height) >= other.y
+        
+    def range_overlap(self, a_min, a_max, b_min, b_max):
+        return (a_min <= b_max) and (b_min <= a_max)
+        
+    def center(self):
+        return GameCoord(int((2*self.x + self.width)/2), int((2*self.y + self.height)/2));
 
 class Game(entityx.Entity):
     def __init__(self):
-        self.staticMap   = [[None]*9 for i in range(5)]
-        self.moveableMap = [[None]*9 for i in range(5)]
-        self.fogofwar    = [[None]*9 for i in range(5)]
+        #self.staticMap   = [[None]*9 for i in range(5)]
+        self.staticMap   = [[TileType.wall]*LEVEL_WIDTH for i in range(LEVEL_WIDTH)]
+        #self.moveableMap = [[None]*9 for i in range(5)]
+        self.moveableMap = [[None]*LEVEL_WIDTH for i in range(LEVEL_WIDTH)]
+        #self.fogofwar    = [[None]*9 for i in range(5)]
+        self.fogofwar    = [[None]*LEVEL_WIDTH for i in range(LEVEL_WIDTH)]
         self.inputResponder = self.Component(InputResponder)
         self.level = 1
-        self.lightLevel = 2
+        self.lightLevel = 2000
         
-        self.GenerateLevelLayout(self.staticMap, [[TileType.wall, TileType.wall, TileType.wall, TileType.wall, TileType.wall, TileType.wall, TileType.wall, TileType.wall, TileType.wall], 
-                            [TileType.wall, TileType.floor, TileType.floor, TileType.floor, TileType.wall, TileType.lava, TileType.floor, TileType.floor, TileType.wall],
-                            [TileType.wall, TileType.floor, TileType.floor, TileType.floor, TileType.floor, TileType.floor, TileType.floor, TileType.floor, TileType.wall],
-                            [TileType.wall, TileType.floor, TileType.floor, TileType.floor, TileType.wall, TileType.floor, TileType.floor, TileType.floor, TileType.wall],
-                            [TileType.wall, TileType.wall, TileType.wall, TileType.wall, TileType.wall, TileType.wall, TileType.wall, TileType.wall, TileType.wall]]);
+        #self.GenerateLevelLayout(self.staticMap, [[TileType.wall, TileType.wall, TileType.wall, TileType.wall, TileType.wall, TileType.wall, TileType.wall, TileType.wall, TileType.wall], 
+        #                    [TileType.wall, TileType.floor, TileType.floor, TileType.floor, TileType.wall, TileType.lava, TileType.floor, TileType.floor, TileType.wall],
+        #                    [TileType.wall, TileType.floor, TileType.floor, TileType.floor, TileType.floor, TileType.floor, TileType.floor, TileType.floor, TileType.wall],
+        #                    [TileType.wall, TileType.floor, TileType.floor, TileType.floor, TileType.wall, TileType.floor, TileType.floor, TileType.floor, TileType.wall],
+        #                    [TileType.wall, TileType.wall, TileType.wall, TileType.wall, TileType.wall, TileType.wall, TileType.wall, TileType.wall, TileType.wall]]);
         # Cover everything in fog tiles
-        self.GenerateLevelLayout(self.fogofwar, [[TileType.fow3]*9 for i in range(5)])
 
-        self.nickCage = Tile(TileType.nickCage, 1, 1, Stats(5, 1))
-        self.moveableMap[1][1] = self.nickCage
-        self.moveableMap[2][1] = Tile(TileType.chest, 2, 1, upgrade = Upgrade(1, 1))
-        self.moveableMap[1][2] = Tile(TileType.clue, 1, 2, upgrade = Upgrade(level = 1))
-        self.moveableMap[2][4] = Tile(TileType.door, 2, 4, stats = Stats(0,0))
-        self.moveableMap[3][6] = Tile(TileType.fbi, 3, 6, stats = Stats(2,1))
+        #self.moveableMap[1][1] = self.nickCage
+        #self.moveableMap[2][1] = Tile(TileType.chest, 2, 1, upgrade = Upgrade(1, 1))
+        #self.moveableMap[1][2] = Tile(TileType.clue, 1, 2, upgrade = Upgrade(level = 1))
+        #self.moveableMap[2][4] = Tile(TileType.door, 2, 4, stats = Stats(0,0))
+        #self.moveableMap[3][6] = Tile(TileType.fbi, 3, 6, stats = Stats(2,1))
+        
+        self.GenerateLevel(3)
+        
+        spawnRoom = self.rooms[randint(0, len(self.rooms) - 1)];
+        spawnX = randint(spawnRoom.x + 1, spawnRoom.x + spawnRoom.width - 1)
+        spawnY = randint(spawnRoom.y + 1, spawnRoom.y + spawnRoom.height - 1)
+        self.nickCage = Tile(TileType.nickCage, spawnX, spawnY, Stats(10, 1))
+        self.moveableMap[spawnX][spawnY] = self.nickCage
+        
+        self.GenerateLevelLayout(self.staticMap, self.staticMap)
+        self.GenerateLevelLayout(self.fogofwar, [[TileType.fow3]*LEVEL_WIDTH for i in range(LEVEL_WIDTH)])
 
     # Returns true if a given gameTileX gameTileY is occupied by items in types
     def isOccupied(self, tileX, tileY, types = [TileType.wall, TileType.door]):
         return (self.moveableMap[tileX][tileY] != None and self.moveableMap[tileX][tileY].tileType in types) or (self.staticMap[tileX][tileY] != None and self.staticMap[tileX][tileY].tileType in types)
 
+    def GenerateLevel(self, numRooms):
+        self.rooms = []
+        for i in range(0, numRooms):
+            failed = True
+            while failed:
+                width = MIN_ROOM_WIDTH + randint(0, MAX_ROOM_WIDTH - MIN_ROOM_WIDTH + 1)
+                height = MIN_ROOM_HEIGHT + randint(0, MAX_ROOM_HEIGHT - MIN_ROOM_HEIGHT + 1)
+                x = randint(0, LEVEL_WIDTH - width - 1) + 1
+                y = randint(0, LEVEL_HEIGHT - height - 1) + 1
+                room = RoomInfo(width, height, x , y)
+                
+                failed = False
+                for j in range(0, len(self.rooms)):
+                    if room.intersects(self.rooms[j]):
+                        failed = True
+                        break
+                        
+                if not failed:
+                    # clear out the room in the static map
+                    for x in range(room.x, room.x + room.width):
+                        for y in range(room.y, room.y + room.height):
+                            self.staticMap[x][y] = TileType.floor
+                            
+                    if len(self.rooms) != 0:
+                        # clear out hallways
+                        prevRoom = self.rooms[len(self.rooms) - 1]
+                        prevRoomCenter = prevRoom.center();
+                        newRoomCenter = room.center();
+                        print str(prevRoomCenter) + " " + str(newRoomCenter)
+                        
+                        if randint(0, 2) == 1:
+                            self.placeHorizontalHallway(prevRoomCenter.x, newRoomCenter.x, prevRoomCenter.y)
+                            #self.placeHorizontalHallway2(prevRoom, room)
+                            self.placeVerticalHallway(prevRoomCenter.y, newRoomCenter.y, newRoomCenter.x)
+                            #self.placeVerticalHallway2(prevRoom, room)
+                        else:
+                            self.placeVerticalHallway(prevRoomCenter.y, newRoomCenter.y, newRoomCenter.x)
+                            #self.placeVerticalHallway2(prevRoom, room)
+                            self.placeHorizontalHallway(prevRoomCenter.x, newRoomCenter.x, prevRoomCenter.y)
+                            #self.placeHorizontalHallway2(prevRoom, room)
+                        
+                    self.rooms.append(room)
+                    print room
+    
+    def placeHorizontalHallway(self, x1, x2, y):
+        for x in range(min(x1, x2), max(x1, x2) + 1):
+            self.staticMap[x][y] = TileType.floor
+    
+    # This function attempts to place doors (broken)
+    def placeHorizontalHallway2(self, r1, r2):
+        r1Center = r1.center()
+        r2Center = r2.center()
+        for x in range(min(r1Center.x, r2Center.x), max(r1Center.x, r2Center.x) + 1):
+            if x == r1.x + r1.width or x == r2.x + r2.width:
+                self.moveableMap[x][r1Center.y] = Tile(TileType.door, x, r1Center.y, stats = Stats(0,0))
+            self.staticMap[x][r1Center.y] = TileType.floor
+            
+    def placeVerticalHallway(self, y1, y2, x):
+        for y in range(min(y1, y2), max(y1, y2) + 1):
+            self.staticMap[x][y] = TileType.floor
+    
+    # This function attempts to place doors (broken)
+    def placeVerticalHallway2(self, r1, r2):
+        r1Center = r1.center()
+        r2Center = r2.center()
+        for y in range(min(r1Center.y, r2Center.y), max(r1Center.y, r2Center.y) + 1):
+            if y == r1.y + r1.height or y == r2.y + r2.height:
+                self.moveableMap[r2Center.x][y] = Tile(TileType.door, r2Center.x, y, stats = Stats(0,0))
+            self.staticMap[r2Center.x][y] = TileType.floor
+    
     def bfs(self, start, end):
         frontier = Queue.Queue()
         frontier.put(start)
