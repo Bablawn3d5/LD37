@@ -17,8 +17,8 @@ MIN_ROOM_WIDTH = 5
 MAX_ROOM_HEIGHT = 10
 MIN_ROOM_HEIGHT = 5
 
-LEVEL_WIDTH = 32
-LEVEL_HEIGHT = 25
+LEVEL_WIDTH = 34
+LEVEL_HEIGHT = 27
 
 GameCoord = collections.namedtuple("GameCoord", "x y")
 
@@ -31,6 +31,14 @@ class RoomInfo(object):
         
     def __repr__(self):
         return "x: " + str(self.x) + " y: " + str(self.y) + " w: " + str(self.width) + " h: " + str(self.height)
+
+    def isOnEdge(self, cord):
+        return (
+                # Is on left or right edge
+                (((self.x-1 == cord.x) or (self.x + self.width == cord.x)) and (self.y-1 <= cord.y and cord.y <= self.y +1 + self.height)) or 
+                # Is on top or bottom edge
+                (((self.y-1 == cord.y) or (self.y + self.height == cord.y)) and (self.x-1 <= cord.x and cord.x <= self.x +1 + self.width))
+                ) 
         
     def intersects(self, other):
         return self.x <= (other.x + other.width) and (self.x + self.width) >= other.x and self.y <= (other.y + other.height) and (self.y + self.height) >= other.y
@@ -58,22 +66,23 @@ class Game(entityx.Entity):
         self.fogofwar    = [[None]*LEVEL_WIDTH for i in range(LEVEL_WIDTH)]
         self.inputResponder = self.Component(InputResponder)
         self.level = 1
-        
-        # Cover everything in fog tiles
-        #self.moveableMap[1][1] = self.nickCage
-        #self.moveableMap[2][1] = Tile(TileType.chest, 2, 1, upgrade = Upgrade(1, 1))
-        #self.moveableMap[1][2] = Tile(TileType.clue, 1, 2, upgrade = Upgrade(level = 1))
-        #self.moveableMap[2][4] = Tile(TileType.door, 2, 4, stats = Stats(0,0))
-        #self.moveableMap[3][6] = Tile(TileType.fbi, 3, 6, stats = Stats(2,1))
-        
         # Generate five random rooms
-        self.rooms = self.GenerateLevel([None,None,None,None,RoomInfo(3,3,1,1)])
+        self.rooms = self.GenerateLevel([None,None,None,None,RoomInfo(3,3,1,1)]) 
+        print str(self.rooms)
+        # Connect rooms together with hallways
+        for i in range(1,len(self.rooms)):
+            # Connect previous room to newest room
+            room = self.rooms[i]
+            prevRoom = self.rooms[i-1]
+            print "id:%i, x: %i, x2: %i" % (i, room.x,prevRoom.x)
+            self.connectRooms(prevRoom, room)
+
         spawnRoom = self.rooms[-1]
         self.GenerateLevelLayout(self.staticMap, self.staticMap)
         self.GenerateLevelLayout(self.fogofwar, [[TileType.fow3]*LEVEL_WIDTH for i in range(LEVEL_WIDTH)])
         
         spawn = spawnRoom.center()
-        self.nickCage = self.addMoveable( Tile(TileType.nickCage, spawn.x, spawn.y, Stats(10, 1, light = 0)) )
+        self.nickCage = self.addMoveable( Tile(TileType.nickCage, spawn.x, spawn.y, Stats(10, 1, light = 20)) )
         self.addMoveable( Tile(TileType.clue, spawn.x, spawn.y-1, upgrade = Upgrade(level=1)) )
         self.addMoveable( Tile(TileType.chest, spawn.x+1, spawn.y, upgrade = Upgrade(5, 1)) )
         self.addMoveable( Tile(TileType.torch, spawn.x-1, spawn.y, upgrade = Upgrade(light = 1)) )
@@ -82,12 +91,18 @@ class Game(entityx.Entity):
         self.sync_bodies(-1*self.nickCage.gameBody.x + Game.SCREEN_TILE_CENTER_X, -1*self.nickCage.gameBody.y + Game.SCREEN_TILE_CENTER_Y)
 
     def addMoveable(self, tile):
+        assert self.moveableMap[tile.gameBody.x][tile.gameBody.y] == None, "Attempted to add tile that's already occupied in the map."
         self.moveableMap[tile.gameBody.x][tile.gameBody.y] = tile
         return tile
 
+    # Returns true if the moveable map at tileX, tileY is occupied by any of tpyes
+    def isMoveableOccupied(self, tileX, tileY, types = [TileType.wall, TileType.door]):
+        return (self.moveableMap[tileX][tileY] != None and self.moveableMap[tileX][tileY].tileType in types)
+
     # Returns true if a given gameTileX gameTileY is occupied by items in types
     def isOccupied(self, tileX, tileY, types = [TileType.wall, TileType.door]):
-        return (self.moveableMap[tileX][tileY] != None and self.moveableMap[tileX][tileY].tileType in types) or (self.staticMap[tileX][tileY] != None and self.staticMap[tileX][tileY].tileType in types)
+        return ( self.isMoveableOccupied(tileX, tileY, types) or 
+                (self.staticMap[tileX][tileY] != None and self.staticMap[tileX][tileY].tileType in types))
 
     # Generates a bunch of rooms that will produce a 'level' containing a bunch of rooms.
     # Rooms are garanteed to not overlap, and not spawn beside eachother.
@@ -106,9 +121,9 @@ class Game(entityx.Entity):
                     width = MIN_ROOM_WIDTH + randint(0, MAX_ROOM_WIDTH - MIN_ROOM_WIDTH + 1)
                     height = MIN_ROOM_HEIGHT + randint(0, MAX_ROOM_HEIGHT - MIN_ROOM_HEIGHT + 1)
                     room = RoomInfo(width, height, 0 , 0)
-                # Randomly move the room around the level
-                room.x = randint(0, LEVEL_WIDTH - width - 1) + 1
-                room.y = randint(0, LEVEL_HEIGHT - height - 1) + 1
+                # Randomly move the room around the level, don't place room on top or bottom edges
+                room.x = randint(2, LEVEL_WIDTH - width - 3)
+                room.y = randint(2, LEVEL_HEIGHT - height - 3)
                 
                 failed = False
                 # Check to see if the room fits on the map using the x,y cordinates chosen
@@ -122,11 +137,6 @@ class Game(entityx.Entity):
                     for x in range(room.x, room.x + room.width):
                         for y in range(room.y, room.y + room.height):
                             self.staticMap[x][y] = TileType.floor
-                            
-                    if len(genRooms) != 0:
-                        # Connect previous room to newest room
-                        prevRoom = genRooms[-1]
-                        self.connectRooms(prevRoom, room)
                         
                     genRooms.append(room)
                     print room
@@ -135,44 +145,31 @@ class Game(entityx.Entity):
     def connectRooms(self, roomOne, roomTwo):                        
         prevRoomCenter = roomOne.center()
         newRoomCenter = roomTwo.center()                    
-        print str(prevRoomCenter) + " " + str(newRoomCenter)
         # Randomly join rooms verticaly or horizontally first
         if randint(0, 2) == 1:
             self.placeHorizontalHallway(prevRoomCenter.x, newRoomCenter.x, prevRoomCenter.y)
             self.placeVerticalHallway(prevRoomCenter.y, newRoomCenter.y, newRoomCenter.x)
-            #self.placeHorizontalHallway2(prevRoom, room)
-            #self.placeVerticalHallway2(prevRoom, room)
         else:
             self.placeVerticalHallway(prevRoomCenter.y, newRoomCenter.y, newRoomCenter.x)
             self.placeHorizontalHallway(prevRoomCenter.x, newRoomCenter.x, prevRoomCenter.y)
-            #self.placeVerticalHallway2(prevRoom, room)
-            #self.placeHorizontalHallway2(prevRoom, room)
 
     def placeHorizontalHallway(self, x1, x2, y):
         for x in range(min(x1, x2), max(x1, x2) + 1):
+            for room in self.rooms:
+                # Check to see if the coordinate is on the edge of any room, and is not occupied by any normal movable.
+                if (room.isOnEdge(GameCoord(x, y)) and 
+                    self.moveableMap[x][y] == None ):
+                    self.addMoveable(Tile(TileType.door, x, y, stats = Stats(0,0)))
             self.staticMap[x][y] = TileType.floor
-    
-    # This function attempts to place doors (broken)
-    def placeHorizontalHallway2(self, r1, r2):
-        r1Center = r1.center()
-        r2Center = r2.center()
-        for x in range(min(r1Center.x, r2Center.x), max(r1Center.x, r2Center.x) + 1):
-            if x == r1.x + r1.width or x == r2.x + r2.width:
-                self.moveableMap[x][r1Center.y] = Tile(TileType.door, x, r1Center.y, stats = Stats(0,0))
-            self.staticMap[x][r1Center.y] = TileType.floor
-            
+
     def placeVerticalHallway(self, y1, y2, x):
         for y in range(min(y1, y2), max(y1, y2) + 1):
+            for room in self.rooms:
+                # Check to see if the coordinate is on the edge of any room, and is not occupied by any normal movable.
+                if (room.isOnEdge(GameCoord(x, y)) and
+                    self.moveableMap[x][y] == None ):
+                    self.addMoveable(Tile(TileType.door, x, y, stats = Stats(0,0)))
             self.staticMap[x][y] = TileType.floor
-    
-    # This function attempts to place doors (broken)
-    def placeVerticalHallway2(self, r1, r2):
-        r1Center = r1.center()
-        r2Center = r2.center()
-        for y in range(min(r1Center.y, r2Center.y), max(r1Center.y, r2Center.y) + 1):
-            if y == r1.y + r1.height or y == r2.y + r2.height:
-                self.moveableMap[r2Center.x][y] = Tile(TileType.door, r2Center.x, y, stats = Stats(0,0))
-            self.staticMap[r2Center.x][y] = TileType.floor
     
     def bfs(self, start, end):
         frontier = Queue.Queue()
