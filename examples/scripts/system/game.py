@@ -69,6 +69,13 @@ class Game(entityx.Entity):
         # Generate five random rooms
         self.rooms = self.GenerateLevel([None,None,None,None,RoomInfo(3,3,1,1)]) 
         print str(self.rooms)
+
+        # clear out the room in the static map
+        for room in self.rooms:
+            for x in range(room.x, room.x + room.width):
+                for y in range(room.y, room.y + room.height):
+                    self.staticMap[x][y] = TileType.floor
+                        
         # Connect rooms together with hallways
         for i in range(1,len(self.rooms)):
             # Connect previous room to newest room
@@ -82,7 +89,7 @@ class Game(entityx.Entity):
         self.GenerateLevelLayout(self.fogofwar, [[TileType.fow3]*LEVEL_WIDTH for i in range(LEVEL_WIDTH)])
         
         spawn = spawnRoom.center()
-        self.nickCage = self.addMoveable( Tile(TileType.nickCage, spawn.x, spawn.y, Stats(10, 1, light = 20)) )
+        self.nickCage = self.addMoveable( Tile(TileType.nickCage, spawn.x, spawn.y, Stats(10, 1, light = 1)) )
         self.addMoveable( Tile(TileType.clue, spawn.x, spawn.y-1, upgrade = Upgrade(level=1)) )
         self.addMoveable( Tile(TileType.chest, spawn.x+1, spawn.y, upgrade = Upgrade(5, 1)) )
         self.addMoveable( Tile(TileType.torch, spawn.x-1, spawn.y, upgrade = Upgrade(light = 1)) )
@@ -133,14 +140,9 @@ class Game(entityx.Entity):
                         break
                         
                 if not failed:
-                    # clear out the room in the static map
-                    for x in range(room.x, room.x + room.width):
-                        for y in range(room.y, room.y + room.height):
-                            self.staticMap[x][y] = TileType.floor
-                        
                     genRooms.append(room)
-                    print room
         return genRooms
+        
     # Joins room one with room two with a hallway
     def connectRooms(self, roomOne, roomTwo):                        
         prevRoomCenter = roomOne.center()
@@ -248,26 +250,27 @@ class Game(entityx.Entity):
         if self.nickCage.body.direction.x == 0 and self.nickCage.body.direction.y == 0:
             return # Nothing more to do for this frame
 
-        # Calculate the direction of FBI (AI)
-        for x in range(0, len(self.moveableMap)):
-            for y in range(0, len(self.moveableMap[x])):
-                tile = self.moveableMap[x][y]
-                if tile != None and tile.tileType == TileType.fbi:
-                    path = self.getPath(GameCoord(tile.gameBody.x, tile.gameBody.y), GameCoord(self.nickCage.gameBody.x, self.nickCage.gameBody.y))
-                    print str(path)
-                    if path != None and len(path) > 1:
-                        tile.body.direction.x = path[1].x - tile.gameBody.x
-                        tile.body.direction.y = path[1].y - tile.gameBody.y
-                    else:
-                        tile.body.direction.x = 0
-                        tile.body.direction.y = 0
                     
         
-        # Damage loop. If damage is dealt, indicate that the tile cannot move
+        # Damage loop/Logic loop. 
+        #  Do AI pathing.
+        #  Do combat
+        #    x2If damage is dealt, indicate that the tile cannot move
         for x in range(0, len(self.moveableMap)):
             for y in range(0, len(self.moveableMap[x])):
                 tile = self.moveableMap[x][y]
                 if tile != None:
+                    # Calculate the direction of FBI (AI)
+                    if tile.tileType == TileType.fbi:
+                        path = self.getPath(GameCoord(tile.gameBody.x, tile.gameBody.y), GameCoord(self.nickCage.gameBody.x, self.nickCage.gameBody.y))
+                        print str(path)
+                        if path != None and len(path) > 1:
+                            tile.body.direction.x = path[1].x - tile.gameBody.x
+                            tile.body.direction.y = path[1].y - tile.gameBody.y
+                        else:
+                            tile.body.direction.x = 0
+                            tile.body.direction.y = 0
+
                     # Calculate the new tile position
                     newTileX = tile.gameBody.x + int(tile.body.direction.x)
                     newTileY = tile.gameBody.y + int(tile.body.direction.y)
@@ -313,19 +316,12 @@ class Game(entityx.Entity):
                         tile.gameBody.x = newTileX
                         tile.gameBody.y = newTileY
                     
-        
-        # Reset all updated flags before doing movement
-        for x in range(0, len(self.moveableMap)):
-            for y in range(0, len(self.moveableMap[x])):
-                tile = self.moveableMap[x][y]
-                if tile != None:
-                    tile.gameBody.updated = False
-        
+
         # Movement loop. If the tile can move, do it.
         for x in range(0, len(self.moveableMap)):
             for y in range(0, len(self.moveableMap[x])):
                 tile = self.moveableMap[x][y]
-                if tile != None and tile.gameBody.updated == False:
+                if tile != None:
                     if tile.gameBody.canMove == True and self.moveableMap[tile.gameBody.x][tile.gameBody.y] == None:
                         # Sync the map to wherever the entity thinks it is
                         self.moveableMap[tile.gameBody.x][tile.gameBody.y] = tile
@@ -345,7 +341,6 @@ class Game(entityx.Entity):
                 # Sync the physical body based on the tile position
                 tile.body.position.x = (tile.gameBody.x + shiftX) * TILESIZE_X
                 tile.body.position.y = (tile.gameBody.y + shiftY) * TILESIZE_Y
-                tile.gameBody.updated = True
 
         for row in self.staticMap:
             for tile in row:        
@@ -354,7 +349,6 @@ class Game(entityx.Entity):
                 # Sync the physical body based on the tile position
                 tile.body.position.x = (tile.gameBody.x + shiftX) * TILESIZE_X
                 tile.body.position.y = (tile.gameBody.y + shiftY) * TILESIZE_Y
-                tile.gameBody.updated = True
 
         for row in self.fogofwar:
             for tile in row:            
@@ -363,7 +357,6 @@ class Game(entityx.Entity):
                 # Sync the physical body based on the tile position
                 tile.body.position.x = (tile.gameBody.x + shiftX) * TILESIZE_X
                 tile.body.position.y = (tile.gameBody.y + shiftY) * TILESIZE_Y
-                tile.gameBody.updated = True
     
     def GenerateLevelLayout(self, targetMap, tileMap):
         for x in range(0, len(tileMap)):
