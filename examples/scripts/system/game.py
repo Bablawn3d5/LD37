@@ -65,7 +65,8 @@ class Game(entityx.Entity):
         self.moveableMap = [[None]*LEVEL_WIDTH for i in range(LEVEL_WIDTH)]
         self.fogofwar    = [[None]*LEVEL_WIDTH for i in range(LEVEL_WIDTH)]
         self.inputResponder = self.Component(InputResponder)
-        self.level = 1
+        self.level = 0
+        self.totalClues = 0
         # Generate five random rooms
         self.rooms = self.GenerateLevel([None,None,None,None,RoomInfo(3,3,1,1)]) 
         print str(self.rooms)
@@ -90,12 +91,16 @@ class Game(entityx.Entity):
         
         spawn = spawnRoom.center()
         self.nickCage = self.addMoveable( Tile(TileType.nickCage, spawn.x, spawn.y, Stats(10, 1, light = 1)) )
-        self.addMoveable( Tile(TileType.clue, spawn.x, spawn.y-1, upgrade = Upgrade(level=1)) )
+        self.addClue(spawn.x, spawn.y-1)
         self.addMoveable( Tile(TileType.chest, spawn.x+1, spawn.y, upgrade = Upgrade(5, 1)) )
-        self.addMoveable( Tile(TileType.torch, spawn.x-1, spawn.y, upgrade = Upgrade(light = 1)) )
+        self.addMoveable( Tile(TileType.torch, spawn.x+1, spawn.y+1, upgrade = Upgrade(light = 1)) )
         self.addMoveable( Tile(TileType.torch, spawn.x-1, spawn.y+1, upgrade = Upgrade(light = 1)) )
 
         self.sync_bodies(-1*self.nickCage.gameBody.x + Game.SCREEN_TILE_CENTER_X, -1*self.nickCage.gameBody.y + Game.SCREEN_TILE_CENTER_Y)
+
+    def addClue(self, x, y):
+        self.addMoveable( Tile(TileType.clue, x, y, upgrade = Upgrade(level=1)))
+        self.totalClues += 1
 
     def addMoveable(self, tile):
         assert self.moveableMap[tile.gameBody.x][tile.gameBody.y] == None, "Attempted to add tile that's already occupied in the map."
@@ -142,7 +147,7 @@ class Game(entityx.Entity):
                 if not failed:
                     genRooms.append(room)
         return genRooms
-        
+
     # Joins room one with room two with a hallway
     def connectRooms(self, roomOne, roomTwo):                        
         prevRoomCenter = roomOne.center()
@@ -263,7 +268,6 @@ class Game(entityx.Entity):
                     # Calculate the direction of FBI (AI)
                     if tile.tileType == TileType.fbi:
                         path = self.getPath(GameCoord(tile.gameBody.x, tile.gameBody.y), GameCoord(self.nickCage.gameBody.x, self.nickCage.gameBody.y))
-                        print str(path)
                         if path != None and len(path) > 1:
                             tile.body.direction.x = path[1].x - tile.gameBody.x
                             tile.body.direction.y = path[1].y - tile.gameBody.y

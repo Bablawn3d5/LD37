@@ -57,7 +57,7 @@ class HUD(entityx.Entity):
         self.HP.text     = self.game.nickCage.stats.health
         self.ATTACK.text = self.game.nickCage.stats.weapon
         self.LIGHT.text  = self.game.nickCage.stats.lightlevel
-        self.LEVEL.text  = self.game.level
+        self.LEVEL.text  = "%i/%i" % (self.game.level, self.game.totalClues)
 
         # Debugging print test to console every 2 seconds.
         self.total_dt -= dt
