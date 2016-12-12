@@ -8,21 +8,33 @@ from gamemath import vector2
 import re
 import math
 
+
+class EventID(object):
+    error, level_start, combat, upgrade, combat_lava = range(0,5) 
+
 class Event(object):
     def __eq__(self,other):
         if other is None:
             return False
         return self.event_text == other.event_text
 
-    def __init__(self, string):
+    def __init__(self, string, delay = 0, length = 0.25):
+        assert string is not None, "wtf did you pass into event(string)?"
+        self.delay = delay
         self.old_count = 0
         self.event_current = 0
-        self.event_final = 1
+        self.event_final = length
         self.event_text = string
         self.is_rendering = True
         self.sound_player_prog = re.compile("[AEIOUaeiouYyZzHhMmTtfF.-]")
 
     def play(self,dt):
+        # Wait till we can print
+        if (self.delay > 0 ):
+            self.delay -= dt
+            return ""
+
+        # Print
         if self.is_rendering:
             self.event_current += dt
             if self.event_current >= self.event_final:
@@ -51,10 +63,10 @@ class EventController(entityx.Entity):
         self.rend.font = "./images/arial.ttf"
         self.rend.fontString = ""
         self.rend.fontSize = 24
-        self.rend.r = 200
-        self.rend.g = 190
+        self.rend.r = 240
+        self.rend.g = 240
         self.rend.b = 180
-        self.rend.a = 200
+        self.rend.a = 250
         # Support for 5 events because thats how many
         # height we gots
         self.events = [None] * EventController.NUMBER_OF_EVENTS

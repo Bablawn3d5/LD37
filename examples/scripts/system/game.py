@@ -2,6 +2,7 @@ import entityx
 from _entityx_components import Body, Renderable, InputResponder, Destroyed
 from gamemath import vector2
 from system.tile import Tile, TileType, Stats, Upgrade
+from system.eventur import EventID
 from random import randint
 import sys
 import Queue
@@ -60,7 +61,7 @@ class Game(entityx.Entity):
     SCREEN_TILE_CENTER_X = 16
     SCREEN_TILE_CENTER_Y = 8
 
-    def __init__(self):
+    def __init__(self, event_signal):
         self.staticMap   = [[TileType.wall]*LEVEL_WIDTH for i in range(LEVEL_WIDTH)]
         self.moveableMap = [[None]*LEVEL_WIDTH for i in range(LEVEL_WIDTH)]
         self.fogofwar    = [[None]*LEVEL_WIDTH for i in range(LEVEL_WIDTH)]
@@ -95,7 +96,8 @@ class Game(entityx.Entity):
         self.addMoveable( Tile(TileType.chest, spawn.x+1, spawn.y, upgrade = Upgrade(5, 1)) )
         self.addMoveable( Tile(TileType.torch, spawn.x+1, spawn.y+1, upgrade = Upgrade(light = 1)) )
         self.addMoveable( Tile(TileType.torch, spawn.x-1, spawn.y+1, upgrade = Upgrade(light = 1)) )
-
+        self.event = event_signal
+        self.event.signal(EventID.level_start, [self.totalClues])
         self.sync_bodies(-1*self.nickCage.gameBody.x + Game.SCREEN_TILE_CENTER_X, -1*self.nickCage.gameBody.y + Game.SCREEN_TILE_CENTER_Y)
 
     def addClue(self, x, y):
@@ -241,12 +243,12 @@ class Game(entityx.Entity):
         for x in range(0, len(self.fogofwar)):
             for y in range(0, len(self.fogofwar[x])):
                 lit_obj = self.nickCage
-                dist2 = (x - lit_obj.gameBody.x)**2 + (y -lit_obj.gameBody.y) ** 2 
-                if( dist2 < (lit_obj.stats.lightlevel + 1.5)**2 ):
+                dist2 = (x - lit_obj.gameBody.x - lit_obj.body.direction.x)**2 + (y -lit_obj.gameBody.y - lit_obj.body.direction.y) ** 2 
+                if( dist2 < (lit_obj.stats.lightlevel + 0.5)**2 ):
                     self.fogofwar[x][y].setTile(TileType.fow0)
-                elif( dist2 < (lit_obj.stats.lightlevel + 2.5)**2 ):
+                elif( dist2 < (lit_obj.stats.lightlevel + 1.5)**2 ):
                     self.fogofwar[x][y].setTile(TileType.fow1)
-                elif( dist2 < (lit_obj.stats.lightlevel + 3.5)**2 ):
+                elif( dist2 < (lit_obj.stats.lightlevel + 2.5)**2 ):
                     self.fogofwar[x][y].setTile(TileType.fow2)
                 else:
                     if(self.fogofwar[x][y].tileType == TileType.fow3):
@@ -282,9 +284,10 @@ class Game(entityx.Entity):
                     if tileInNewPosition != None and tileInNewPosition != tile:
                         if tileInNewPosition.stats != None and tile.stats != None:
                             # Do damage to each other
-                            print "Combat detected."
                             tileInNewPosition.stats.health -= tile.stats.weapon
                             tile.stats.health -= tileInNewPosition.stats.weapon
+                            self.event.signal(EventID.combat, [tile.getName(), tileInNewPosition.stats.weapon])
+                            self.event.signal(EventID.combat, [tileInNewPosition.getName(), tile.stats.weapon])
                             # Destroy entities if <= 0 HP, and manually cleanup the map
                             # since we only reconcile changes if movement happens (below)
                             if tile.stats.health <= 0:
@@ -296,9 +299,8 @@ class Game(entityx.Entity):
                             tileInNewPosition.gameBody.canMove = False
                             tile.gameBody.canMove = False
                         else:
-                            print "Collision detected with non-stat entity!"
                             if tileInNewPosition != None and tileInNewPosition.upgrade != None:
-                                print "Upgrade obtained!"
+                                self.event.signal(EventID.upgrade, [tile, tileInNewPosition])
                                 tile.stats.health += tileInNewPosition.upgrade.health
                                 tile.stats.weapon += tileInNewPosition.upgrade.weapon
                                 tile.stats.lightlevel += tileInNewPosition.upgrade.lightlevel
@@ -308,6 +310,7 @@ class Game(entityx.Entity):
                                 tile.gameBody.canMove = True
                     elif tileInNewPosition == None and self.staticMap[newTileX][newTileY].tileType != TileType.wall:
                         if self.staticMap[newTileX][newTileY].tileType == TileType.lava:
+                            self.event.signal(EventID.combat, [tile.getName(), tileInNewPosition.stats.weapon])
                             tile.stats.health -= self.staticMap[newTileX][newTileY].stats.weapon
                             if tile.stats.health <= 0:
                                 tile.destroyed = tile.Component(Destroyed)

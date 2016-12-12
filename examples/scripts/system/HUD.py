@@ -1,7 +1,8 @@
 import entityx
 from _entityx_components import Body, Renderable
 from system.game import Game
-from system.eventur import EventController, Event
+from system.tile import TileType
+from system.eventur import EventController, Event, EventID
 import sys
 
 HUD_TILE_X = 32
@@ -47,11 +48,10 @@ class HUD(entityx.Entity):
 
         self.LEVEL = HUD_TEXT(10)
         self.LEVEL.position(HUD_X + HUD_TILE_X * 3, HUD_Y + HUD_TILE_Y * 3)
-        self.game = Game()
         self.eventController = EventController()
         self.eventController.body.position.x = HUD_X + HUD_TILE_X * 6
         self.eventController.body.position.y = HUD_Y
-        self.total_dt = 0
+        self.game = Game(self)
 
     def update(self, dt):
         self.HP.text     = self.game.nickCage.stats.health
@@ -59,9 +59,21 @@ class HUD(entityx.Entity):
         self.LIGHT.text  = self.game.nickCage.stats.lightlevel
         self.LEVEL.text  = "%i/%i" % (self.game.level, self.game.totalClues)
 
-        # Debugging print test to console every 2 seconds.
-        self.total_dt -= dt
-        if (self.total_dt < 0):
-            self.eventController.playEvent(Event("Test!!"))
-            self.total_dt = 2
-
+    def signal(self, event, items = []):
+        if(event == EventID.level_start):
+            self.eventController.playEvent(Event("Nick: This must be the spot! I just need to find %i clues and get outta here.\nI'm one step closer to finding 'the one room'." % (items[0])))
+        elif(event == EventID.combat ):
+            name = items[0]
+            dmg  = items[1]
+            self.eventController.playEvent(Event("[Combat] %s took %i damage" % (name, dmg)))
+            if(name == "Nick"):
+                self.eventController.playEvent(Event("Nick: TAKE THAT!"))
+        elif(event == EventID.upgrade ):
+            self.eventController.playEvent(Event("Nick: Oh that thing looks like will help in combat"))
+        elif(event == EventID.combat_lava ):
+            name = items[0]
+            dmg  = items[1]
+            self.eventController.playEvent(Event("[Combat] %s took %i damage" % (name, dmg)))
+            self.eventController.playEvent(Event("Nick: Ouch! that lava looks like it is hot stuff"))
+        else:
+            print "Unhandled event: " + str(event)

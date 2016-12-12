@@ -21,7 +21,6 @@ class Tile(entityx.Entity):
         self.upgrade = upgrade
         self.setTile(tileType)
         
-
     def update(self, dt):
         # Do nothing.
         self.updated = True
@@ -30,6 +29,13 @@ class Tile(entityx.Entity):
         self.tileType = tileType
         self.renderable.layer = TileType.GetLayer(self.tileType)
         self.renderable.currentAnim = TileType.GetName(self.tileType)
+
+    def getName(self):
+        name = TileType.GetName(self.tileType)
+        # Specaial case nick because we're dumb
+        if (name == "NC"):
+            return "Nick"
+        return name
         
 class Stats(object):
     def __init__(self, health = 0, weapon = 1, light = 1):
