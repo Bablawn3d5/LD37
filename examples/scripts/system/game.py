@@ -76,7 +76,10 @@ class Game(entityx.Entity):
         for room in self.rooms:
             for x in range(room.x, room.x + room.width):
                 for y in range(room.y, room.y + room.height):
-                    self.staticMap[x][y] = TileType.floor
+                    if randint(0, 10) == 1:
+                        self.staticMap[x][y] = TileType.lava
+                    else:
+                        self.staticMap[x][y] = TileType.floor
                         
         # Connect rooms together with hallways
         for i in range(1,len(self.rooms)):
@@ -286,8 +289,8 @@ class Game(entityx.Entity):
                             # Do damage to each other
                             tileInNewPosition.stats.health -= tile.stats.weapon
                             tile.stats.health -= tileInNewPosition.stats.weapon
-                            self.event.signal(EventID.combat, [tile.getName(), tileInNewPosition.stats.weapon])
-                            self.event.signal(EventID.combat, [tileInNewPosition.getName(), tile.stats.weapon])
+                            self.event.signal(EventID.combat, [tile, tileInNewPosition.stats.weapon])
+                            self.event.signal(EventID.combat, [tileInNewPosition, tile.stats.weapon])
                             # Destroy entities if <= 0 HP, and manually cleanup the map
                             # since we only reconcile changes if movement happens (below)
                             if tile.stats.health <= 0:
@@ -310,8 +313,9 @@ class Game(entityx.Entity):
                                 tile.gameBody.canMove = True
                     elif tileInNewPosition == None and self.staticMap[newTileX][newTileY].tileType != TileType.wall:
                         if self.staticMap[newTileX][newTileY].tileType == TileType.lava:
-                            self.event.signal(EventID.combat, [tile.getName(), tileInNewPosition.stats.weapon])
-                            tile.stats.health -= self.staticMap[newTileX][newTileY].stats.weapon
+                            dmg = self.staticMap[newTileX][newTileY].stats.weapon
+                            tile.stats.health -= dmg
+                            self.event.signal(EventID.combat, [tile, dmg])
                             if tile.stats.health <= 0:
                                 tile.destroyed = tile.Component(Destroyed)
                                 self.moveableMap[x][y] = None

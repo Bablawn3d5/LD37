@@ -63,7 +63,7 @@ class HUD(entityx.Entity):
         if(event == EventID.level_start):
             self.eventController.playEvent(Event("Nick: This must be the spot! I just need to find %i clues and get outta here.\nI'm one step closer to finding 'the one room'." % (items[0])))
         elif(event == EventID.combat ):
-            name = items[0]
+            name = items[0].getName()
             dmg  = items[1]
             self.eventController.playEvent(Event("[Combat] %s took %i damage" % (name, dmg)))
             if(name == "Nick"):
@@ -71,7 +71,7 @@ class HUD(entityx.Entity):
         elif(event == EventID.upgrade ):
             self.eventController.playEvent(Event("Nick: Oh that thing looks like will help in combat"))
         elif(event == EventID.combat_lava ):
-            name = items[0]
+            name = items[0].getName()
             dmg  = items[1]
             self.eventController.playEvent(Event("[Combat] %s took %i damage" % (name, dmg)))
             self.eventController.playEvent(Event("Nick: Ouch! that lava looks like it is hot stuff"))
